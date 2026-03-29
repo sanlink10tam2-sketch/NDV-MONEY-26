@@ -230,11 +230,11 @@ END $$;`;
     JWT_SECRET: '',
     ADMIN_PHONE: '',
     ADMIN_PASSWORD: '',
-    PAYMENT_CONTENT_FULL_SETTLEMENT: 'TAT TOAN TAT CA',
-    PAYMENT_CONTENT_PARTIAL_SETTLEMENT: 'TAT TOAN 1 PHAN',
-    PAYMENT_CONTENT_EXTENSION: 'GIA HAN',
-    PAYMENT_CONTENT_UPGRADE: 'NANG HANG',
-    CONTRACT_CODE_FORMAT: 'HD-{RANDOM}',
+    PAYMENT_CONTENT_FULL_SETTLEMENT: 'TAT TOAN TAT CA {ID}',
+    PAYMENT_CONTENT_PARTIAL_SETTLEMENT: 'TAT TOAN 1 PHAN {ID}',
+    PAYMENT_CONTENT_EXTENSION: 'GIA HAN {SLGH}',
+    PAYMENT_CONTENT_UPGRADE: 'NANG HANG {TEN HANG}',
+    CONTRACT_CODE_FORMAT: 'HD-{MHD}',
     USER_ID_FORMAT: 'US-{RANDOM}'
   };
 
@@ -870,9 +870,9 @@ END $$;`;
                         value={localSettings.CONTRACT_CODE_FORMAT || ''}
                         onChange={(e) => setLocalSettings({...localSettings, CONTRACT_CODE_FORMAT: e.target.value})}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                        placeholder="Ví dụ: HD-{RANDOM}"
+                        placeholder="Ví dụ: HD-{MHD}"
                       />
-                      <p className="text-[7px] text-gray-500 italic">Sử dụng {'{RANDOM}'} để tạo mã ngẫu nhiên.</p>
+                      <p className="text-[7px] text-gray-500 italic">Sử dụng {'{MHD}'} để tạo mã ngẫu nhiên.</p>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Định dạng ID User</label>
@@ -972,7 +972,7 @@ END $$;`;
                           onChange={(e) => setLocalSettings({...localSettings, PAYMENT_CONTENT_FULL_SETTLEMENT: e.target.value})}
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
                         />
-                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{ID}'} hoặc {'{USER}'} để tạo nội dung.</p>
+                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{ID}'}, {'{MHD}'} hoặc {'{USER}'} để tạo nội dung.</p>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Tất toán 1 phần</label>
@@ -982,7 +982,7 @@ END $$;`;
                           onChange={(e) => setLocalSettings({...localSettings, PAYMENT_CONTENT_PARTIAL_SETTLEMENT: e.target.value})}
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
                         />
-                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{ID}'} hoặc {'{USER}'} để tạo nội dung.</p>
+                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{ID}'}, {'{MHD}'} hoặc {'{USER}'} để tạo nội dung.</p>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Gia hạn</label>
@@ -992,7 +992,7 @@ END $$;`;
                           onChange={(e) => setLocalSettings({...localSettings, PAYMENT_CONTENT_EXTENSION: e.target.value})}
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
                         />
-                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{ID}'} hoặc {'{USER}'} để tạo nội dung.</p>
+                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{ID}'}, {'{MHD}'}, {'{SLGH}'} hoặc {'{USER}'} để tạo nội dung.</p>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Nâng hạng</label>
@@ -1002,7 +1002,7 @@ END $$;`;
                           onChange={(e) => setLocalSettings({...localSettings, PAYMENT_CONTENT_UPGRADE: e.target.value})}
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
                         />
-                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{TEN HANG NANG CAP}'}, {'{TEN HANG}'} và {'{USER}'} để tạo nội dung.</p>
+                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{TEN HANG}'} hoặc {'{USER}'} để tạo nội dung.</p>
                       </div>
                     </div>
                   </div>

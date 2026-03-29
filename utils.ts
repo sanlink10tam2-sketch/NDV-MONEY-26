@@ -70,7 +70,7 @@ export const generateContractId = (userId: string, format = 'HD-{RANDOM}'): stri
   const safeFormat = (typeof format === 'string' && format.trim() !== '') ? format : 'HD-{RANDOM}';
 
   return safeFormat
-    .replace(/\{RANDOM\}|\{RANDOM 4 SỐ\}|\{MÃ NGẪU NHIÊN\}|\{Mã Hợp Đồng\}/gi, randomPart)
+    .replace(/\{RANDOM\}|\{RANDOM 4 SỐ\}|\{MÃ NGẪU NHIÊN\}|\{Mã Hợp Đồng\}|\{MHD\}/gi, randomPart)
     .replace(/\{USER\}|\{MÃ USER\}|\{NGƯỜI DÙNG\}/gi, userPart)
     .replace(/\{DATE\}|\{NGÀY\}/gi, dateStr)
     .replace(/\{YEAR\}|\{NĂM\}/gi, year)

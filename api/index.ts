@@ -138,9 +138,9 @@ const getMergedSettings = async (client: any) => {
     ADMIN_PASSWORD: dbSettings.ADMIN_PASSWORD || config.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || '119011Ngon',
     PAYMENT_CONTENT_FULL_SETTLEMENT: dbSettings.PAYMENT_CONTENT_FULL_SETTLEMENT || config.PAYMENT_CONTENT_FULL_SETTLEMENT || "TAT TOAN TAT CA",
     PAYMENT_CONTENT_PARTIAL_SETTLEMENT: dbSettings.PAYMENT_CONTENT_PARTIAL_SETTLEMENT || config.PAYMENT_CONTENT_PARTIAL_SETTLEMENT || "TAT TOAN 1 PHAN",
-    PAYMENT_CONTENT_EXTENSION: dbSettings.PAYMENT_CONTENT_EXTENSION || config.PAYMENT_CONTENT_EXTENSION || "GIA HAN",
-    PAYMENT_CONTENT_UPGRADE: dbSettings.PAYMENT_CONTENT_UPGRADE || config.PAYMENT_CONTENT_UPGRADE || "NANG HANG",
-    CONTRACT_CODE_FORMAT: dbSettings.CONTRACT_CODE_FORMAT || config.CONTRACT_CODE_FORMAT || "HD-{RANDOM}",
+    PAYMENT_CONTENT_EXTENSION: dbSettings.PAYMENT_CONTENT_EXTENSION || config.PAYMENT_CONTENT_EXTENSION || "GIA HAN {SLGH}",
+    PAYMENT_CONTENT_UPGRADE: dbSettings.PAYMENT_CONTENT_UPGRADE || config.PAYMENT_CONTENT_UPGRADE || "NANG HANG {TEN HANG}",
+    CONTRACT_CODE_FORMAT: dbSettings.CONTRACT_CODE_FORMAT || config.CONTRACT_CODE_FORMAT || "HD-{MHD}",
     USER_ID_FORMAT: dbSettings.USER_ID_FORMAT || config.USER_ID_FORMAT || "US-{RANDOM}",
     ZALO_GROUP_LINK: dbSettings.ZALO_GROUP_LINK || config.ZALO_GROUP_LINK || "",
     SYSTEM_BUDGET: dbSettings.SYSTEM_BUDGET !== undefined ? dbSettings.SYSTEM_BUDGET : 30000000,
@@ -1415,7 +1415,7 @@ router.post("/payment/create-link", async (req, res) => {
         
         finalDescription = template
           .replace(/\{ID\}|\{USER\}|\{MÃ USER\}|\{MA USER\}|\{TEN USER\}/gi, id.replace(/-/g, ''))
-          .replace(/\{RANK\}|\{HẠNG\}|\{HANG\}|\{TÊN HẠNG CẦN NÂNG\}|\{TEN HANG NANG CAP\}|\{TEN HANG\}/gi, rankName);
+          .replace(/\{RANK\}|\{HẠNG\}|\{HANG\}|\{TÊN HẠNG CẦN NÂNG\}|\{TEN HANG NANG CAP\}|\{TEN HANG\}|\{TÊN HẠNG\}/gi, rankName);
       } else {
         let template = "";
         let loanData: any = null;
@@ -1432,8 +1432,8 @@ router.post("/payment/create-link", async (req, res) => {
         }
         
         finalDescription = template
-          .replace(/\{ID\}|\{Mã Hợp Đồng\}|\{LOAN_ID\}/gi, id.replace(/-/g, ''))
-          .replace(/\{SỐ LẦN GIA HẠN\}|\{EXTENSION_COUNT\}/gi, (loanData?.extensionCount || 0) + 1);
+          .replace(/\{ID\}|\{Mã Hợp Đồng\}|\{LOAN_ID\}|\{MHD\}/gi, id.replace(/-/g, ''))
+          .replace(/\{SỐ LẦN GIA HẠN\}|\{EXTENSION_COUNT\}|\{SLGH\}/gi, (loanData?.extensionCount || 0) + 1);
       }
     }
 
