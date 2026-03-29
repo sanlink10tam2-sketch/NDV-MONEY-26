@@ -1446,8 +1446,8 @@ router.post("/payment/create-link", async (req, res) => {
       orderCode: orderCode,
       amount: Number(amount),
       description: finalDescription,
-      cancelUrl: `${domain}/dashboard?payment=cancel&type=${type}&id=${id}&screen=${screen || ''}`,
-      returnUrl: `${domain}/dashboard?payment=success&type=${type}&id=${id}&screen=${screen || ''}`,
+      cancelUrl: `${domain}/api/payment-result?payment=cancel&type=${type}&id=${id}&screen=${screen || ''}`,
+      returnUrl: `${domain}/api/payment-result?payment=success&type=${type}&id=${id}&screen=${screen || ''}`,
     };
 
     const paymentLinkResponse = await payosInstance.paymentRequests.create(body);
@@ -1757,6 +1757,74 @@ router.post("/payment/webhook", async (req, res) => {
     console.error("PayOS Webhook Error:", e);
     res.json({ status: "error", message: e.message });
   }
+});
+
+router.get("/payment-result", (req, res) => {
+  const { payment, type, id, screen } = req.query;
+  res.send(`
+    <html>
+      <head>
+        <title>Kết quả thanh toán</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            background: #000; 
+            color: #fff; 
+            margin: 0;
+            text-align: center;
+          }
+          .loader { 
+            border: 4px solid #1a1a1a; 
+            border-top: 4px solid #ff8c00; 
+            border-radius: 50%; 
+            width: 50px; 
+            height: 50px; 
+            animation: spin 1s linear infinite; 
+            margin-bottom: 24px; 
+            box-shadow: 0 0 20px rgba(255, 140, 0, 0.2);
+          }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          h1 { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 8px 0; }
+          p { font-size: 12px; color: #888; margin: 0; }
+        </style>
+      </head>
+      <body>
+        <div class="loader"></div>
+        <h1>Đang xử lý</h1>
+        <p>Hệ thống đang đồng bộ kết quả thanh toán...</p>
+        <script>
+          // Notify the opener if it exists
+          try {
+            if (window.opener && !window.opener.closed) {
+              window.opener.postMessage({ 
+                type: 'PAYOS_PAYMENT_RESULT', 
+                payment: '${payment}', 
+                paymentType: '${type}', 
+                id: '${id}', 
+                screen: '${screen}' 
+              }, '*');
+              
+              // Give it a moment to process before closing
+              setTimeout(() => {
+                window.close();
+              }, 2000);
+            } else {
+              // If no opener, redirect to dashboard
+              window.location.href = '/dashboard?payment=${payment}&type=${type}&id=${id}&screen=${screen}';
+            }
+          } catch (e) {
+            console.error('Error notifying opener:', e);
+            window.location.href = '/dashboard?payment=${payment}&type=${type}&id=${id}&screen=${screen}';
+          }
+        </script>
+      </body>
+    </html>
+  `);
 });
 
 // Export the router

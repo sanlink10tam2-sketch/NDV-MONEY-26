@@ -82,7 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'silver': return { name: 'BẠC', color: 'bg-gray-300', textColor: 'text-black' };
       case 'gold': return { name: 'VÀNG', color: 'bg-yellow-400', textColor: 'text-black' };
       case 'diamond': return { name: 'KIM CƯƠNG', color: 'bg-[#ff8c00]', textColor: 'text-black' };
-      default: return { name: 'USER', color: 'bg-gray-600', textColor: 'text-white' };
+      default: return { name: 'TIÊU CHUẨN', color: 'bg-gray-600', textColor: 'text-white' };
     }
   };
 

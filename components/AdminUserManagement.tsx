@@ -91,7 +91,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, loans,
       l.status === 'CHỜ TẤT TOÁN'
     ).length;
     
-    if (user?.pendingUpgradeRank) count += 1;
+    if (user?.pendingUpgradeRank && user?.rankUpgradeBill) count += 1;
     
     return count;
   };
@@ -142,12 +142,12 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, loans,
 
   const getRankName = (rank: string) => {
     switch(rank) {
-      case 'standard': return 'USER';
+      case 'standard': return 'TIÊU CHUẨN';
       case 'bronze': return 'HẠNG ĐỒNG';
       case 'silver': return 'HẠNG BẠC';
       case 'gold': return 'HẠNG VÀNG';
       case 'diamond': return 'KIM CƯƠNG';
-      default: return 'USER';
+      default: return 'TIÊU CHUẨN';
     }
   };
 
@@ -368,7 +368,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, loans,
 
                   {currentSection === 'INFO' ? (
                     <div className="space-y-8 animate-in fade-in duration-300">
-                      {u.pendingUpgradeRank && (
+                      {u.pendingUpgradeRank && u.rankUpgradeBill && (
                         <div className="bg-orange-500/5 border border-orange-500/20 rounded-2xl p-4 space-y-4">
                            <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2.5">

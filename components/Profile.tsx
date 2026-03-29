@@ -38,12 +38,12 @@ interface ProfileProps {
 const Profile: React.FC<ProfileProps> = ({ user, onBack, onLogout, onUpdateBank, onUpdateProfile, onRefresh, onShowSecurity, onShowTerms, onShowBankInfo, onShowEditProfile }) => {
   const getRankName = (rank?: string) => {
     switch(rank) {
-      case 'standard': return 'Thành viên Tiêu chuẩn';
+      case 'standard': return 'TIÊU CHUẨN';
       case 'bronze': return 'Thành viên hạng Đồng';
       case 'silver': return 'Thành viên hạng Bạc';
       case 'gold': return 'Thành viên hạng Vàng';
       case 'diamond': return 'Thành viên hạng Kim cương';
-      default: return 'Thành viên Tiêu chuẩn';
+      default: return 'TIÊU CHUẨN';
     }
   };
 

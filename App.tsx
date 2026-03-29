@@ -98,8 +98,12 @@ const App: React.FC = () => {
       
       const data = await response.json();
       if (data.success && data.checkoutUrl) {
-        // Redirect to PayOS checkout page
-        window.location.href = data.checkoutUrl;
+        // Open PayOS checkout page in a new tab
+        const paymentWindow = window.open(data.checkoutUrl, '_blank');
+        if (!paymentWindow) {
+          // If popup is blocked, fallback to current window
+          window.location.href = data.checkoutUrl;
+        }
       } else {
         alert("Không thể tạo link thanh toán. Vui lòng thử lại sau.");
       }
@@ -328,151 +332,154 @@ const App: React.FC = () => {
     }
   }, [user]);
 
+  const fetchData = async (isInitial = false, fetchFull = false) => {
+    if (isGlobalProcessing) return;
+    
+    if (!user || !token) {
+      if (isInitial) setIsInitialized(true);
+      return;
+    }
+
+    setIsGlobalProcessing(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      console.warn("[FETCH] Request timed out after 60s");
+      controller.abort();
+    }, 60000);
+
+    try {
+      const params = new URLSearchParams();
+      if (user) {
+        params.append('userId', user.id);
+        if (user.isAdmin) {
+          params.append('isAdmin', 'true');
+          // For admin, fetch first 20 items by default to save egress
+          params.append('userFrom', '0');
+          params.append('userTo', '19');
+          params.append('loanFrom', '0');
+          params.append('loanTo', '19');
+        }
+      }
+      if (user?.isAdmin) params.append('checkStorage', 'true');
+      if (fetchFull) {
+        params.append('full', 'true');
+        // If full fetch, maybe we want more, but let's stick to a reasonable limit
+        if (user?.isAdmin) {
+          params.append('userTo', '49'); // Fetch 50 users
+          params.append('loanTo', '49'); // Fetch 50 loans
+        }
+      }
+      
+      params.append('notifFrom', '0');
+      params.append('notifTo', '9'); // Only 10 notifications
+      params.append('t', Date.now().toString()); // Cache buster
+      const url = `/api/data?${params.toString()}`;
+      
+      console.log(`[FETCH] Loading data from ${url} (full=${fetchFull})`);
+      const response = await authenticatedFetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        let errorMessage = `Lỗi Server ${response.status}${response.statusText ? ': ' + response.statusText : ''}`;
+        try {
+          const text = await response.text();
+          console.error(`[FETCH] Error response body:`, text);
+          try {
+            const errorData = JSON.parse(text);
+            if (errorData.message) errorMessage = errorData.message;
+            else if (errorData.error) errorMessage = errorData.error;
+            else if (errorData.details) errorMessage = `${errorMessage} (${errorData.details})`;
+          } catch (e) {
+            if (text && text.length < 250 && !text.includes('<!DOCTYPE')) {
+              errorMessage = text;
+            }
+          }
+        } catch (e) {}
+        
+        if (response.status === 500 || response.status === 503 || errorMessage.toLowerCase().includes('database') || errorMessage.toLowerCase().includes('supabase') || errorMessage.toLowerCase().includes('kết nối')) {
+          setDbError(errorMessage);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error(`[FETCH] Non-JSON response:`, text.substring(0, 200));
+        throw new Error(`Server không trả về JSON (Status: ${response.status})`);
+      }
+
+      const data = await response.json();
+      
+      console.log(`[FETCH] Data loaded successfully:`, { 
+        users: data.users?.length, 
+        loans: data.loans?.length 
+      });
+      if (data.loans) {
+        setLoans(data.loans);
+        localStorage.setItem('ndv_loans', JSON.stringify(data.loans));
+      }
+      if (data.users) {
+        setRegisteredUsers(data.users);
+        localStorage.setItem('ndv_users', JSON.stringify(data.users));
+      }
+      if (data.notifications) {
+        const deduplicated = deduplicateNotifications(data.notifications).slice(0, 10);
+        setNotifications(deduplicated);
+        localStorage.setItem('ndv_notifications', JSON.stringify(deduplicated));
+      }
+      if (data.budget !== undefined) {
+        setSystemBudget(data.budget);
+        localStorage.setItem('ndv_budget', data.budget.toString());
+      }
+      if (data.rankProfit !== undefined) {
+        setRankProfit(data.rankProfit);
+        localStorage.setItem('ndv_rank_profit', data.rankProfit.toString());
+      }
+      if (data.loanProfit !== undefined) {
+        setLoanProfit(data.loanProfit);
+        localStorage.setItem('ndv_loan_profit', data.loanProfit.toString());
+      }
+      if (data.monthlyStats !== undefined) {
+        const slicedStats = data.monthlyStats.slice(0, 6);
+        setMonthlyStats(slicedStats);
+        localStorage.setItem('ndv_monthly_stats', JSON.stringify(slicedStats));
+      }
+      if (data.lastKeepAlive !== undefined) {
+        setLastKeepAlive(data.lastKeepAlive);
+        if (data.lastKeepAlive) localStorage.setItem('ndv_last_keep_alive', data.lastKeepAlive);
+      }
+      if (data.storageFull !== undefined) setStorageFull(data.storageFull);
+      if (data.storageUsage !== undefined) setStorageUsage(data.storageUsage);
+
+      if (user && data.users) {
+        const freshUser = data.users.find((u: User) => u.id === user.id);
+        if (freshUser) {
+          setUser(freshUser);
+          localStorage.setItem('vnv_user', JSON.stringify(freshUser));
+        }
+      }
+    } catch (e: any) {
+      clearTimeout(timeout);
+      if (e.name === 'AbortError') {
+        console.warn("[FETCH] Request was aborted (timeout or cleanup)");
+      } else {
+        console.error("Lỗi khi tải dữ liệu ban đầu:", e.message || e);
+      }
+    } finally {
+      if (isInitial) setIsInitialized(true);
+      setIsGlobalProcessing(false);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
-
-    const fetchData = async (isInitial = false, fetchFull = false) => {
-      if (!isMounted || isGlobalProcessing) return;
-      
-      if (!user || !token) {
-        if (isInitial) setIsInitialized(true);
-        return;
-      }
-
-      setIsGlobalProcessing(true);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => {
-        console.warn("[FETCH] Request timed out after 60s");
-        controller.abort();
-      }, 60000);
-
-      try {
-        const params = new URLSearchParams();
-        if (user) {
-          params.append('userId', user.id);
-          if (user.isAdmin) {
-            params.append('isAdmin', 'true');
-            // For admin, fetch first 20 items by default to save egress
-            params.append('userFrom', '0');
-            params.append('userTo', '19');
-            params.append('loanFrom', '0');
-            params.append('loanTo', '19');
-          }
-        }
-        if (user?.isAdmin) params.append('checkStorage', 'true');
-        if (fetchFull) {
-          params.append('full', 'true');
-          // If full fetch, maybe we want more, but let's stick to a reasonable limit
-          if (user?.isAdmin) {
-            params.append('userTo', '49'); // Fetch 50 users
-            params.append('loanTo', '49'); // Fetch 50 loans
-          }
-        }
-        
-        params.append('notifFrom', '0');
-        params.append('notifTo', '9'); // Only 10 notifications
-        params.append('t', Date.now().toString()); // Cache buster
-        const url = `/api/data?${params.toString()}`;
-        
-        console.log(`[FETCH] Loading data from ${url} (full=${fetchFull})`);
-        const response = await authenticatedFetch(url, { signal: controller.signal });
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-          let errorMessage = `Lỗi Server ${response.status}${response.statusText ? ': ' + response.statusText : ''}`;
-          try {
-            const text = await response.text();
-            console.error(`[FETCH] Error response body:`, text);
-            try {
-              const errorData = JSON.parse(text);
-              if (errorData.message) errorMessage = errorData.message;
-              else if (errorData.error) errorMessage = errorData.error;
-              else if (errorData.details) errorMessage = `${errorMessage} (${errorData.details})`;
-            } catch (e) {
-              if (text && text.length < 250 && !text.includes('<!DOCTYPE')) {
-                errorMessage = text;
-              }
-            }
-          } catch (e) {}
-          
-          if (response.status === 500 || response.status === 503 || errorMessage.toLowerCase().includes('database') || errorMessage.toLowerCase().includes('supabase') || errorMessage.toLowerCase().includes('kết nối')) {
-            setDbError(errorMessage);
-          }
-          throw new Error(errorMessage);
-        }
-        
-        const contentType = response.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          const text = await response.text();
-          console.error(`[FETCH] Non-JSON response:`, text.substring(0, 200));
-          throw new Error(`Server không trả về JSON (Status: ${response.status})`);
-        }
-
-        const data = await response.json();
-        if (!isMounted) return;
-        
-        console.log(`[FETCH] Data loaded successfully:`, { 
-          users: data.users?.length, 
-          loans: data.loans?.length 
-        });
-        if (data.loans) {
-          setLoans(data.loans);
-          localStorage.setItem('ndv_loans', JSON.stringify(data.loans));
-        }
-        if (data.users) {
-          setRegisteredUsers(data.users);
-          localStorage.setItem('ndv_users', JSON.stringify(data.users));
-        }
-        if (data.notifications) {
-          const deduplicated = deduplicateNotifications(data.notifications).slice(0, 10);
-          setNotifications(deduplicated);
-          localStorage.setItem('ndv_notifications', JSON.stringify(deduplicated));
-        }
-        if (data.budget !== undefined) {
-          setSystemBudget(data.budget);
-          localStorage.setItem('ndv_budget', data.budget.toString());
-        }
-        if (data.rankProfit !== undefined) {
-          setRankProfit(data.rankProfit);
-          localStorage.setItem('ndv_rank_profit', data.rankProfit.toString());
-        }
-        if (data.loanProfit !== undefined) {
-          setLoanProfit(data.loanProfit);
-          localStorage.setItem('ndv_loan_profit', data.loanProfit.toString());
-        }
-        if (data.monthlyStats !== undefined) {
-          const slicedStats = data.monthlyStats.slice(0, 6);
-          setMonthlyStats(slicedStats);
-          localStorage.setItem('ndv_monthly_stats', JSON.stringify(slicedStats));
-        }
-        if (data.lastKeepAlive !== undefined) {
-          setLastKeepAlive(data.lastKeepAlive);
-          if (data.lastKeepAlive) localStorage.setItem('ndv_last_keep_alive', data.lastKeepAlive);
-        }
-        if (data.storageFull !== undefined) setStorageFull(data.storageFull);
-        if (data.storageUsage !== undefined) setStorageUsage(data.storageUsage);
-
-        if (user && data.users) {
-          const freshUser = data.users.find((u: User) => u.id === user.id);
-          if (freshUser) {
-            setUser(freshUser);
-            localStorage.setItem('vnv_user', JSON.stringify(freshUser));
-          }
-        }
-      } catch (e: any) {
-        clearTimeout(timeout);
-        if (e.name === 'AbortError') {
-          console.warn("[FETCH] Request was aborted (timeout or cleanup)");
-        } else {
-          console.error("Lỗi khi tải dữ liệu ban đầu:", e.message || e);
-        }
-      } finally {
-        if (isInitial) setIsInitialized(true);
-        setIsGlobalProcessing(false);
-      }
+    
+    const initialFetch = async () => {
+      if (isMounted) await fetchData(true);
     };
 
-    fetchData(true);
+    initialFetch();
 
     // Socket.io initialization
     const socket = io(window.location.origin);
@@ -624,14 +631,7 @@ const App: React.FC = () => {
 
   const [pendingPaymentRestore, setPendingPaymentRestore] = useState<{ type: string, id: string, screen: AppView } | null>(null);
 
-  // Handle PayOS return/cancel parameters
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const payment = params.get('payment');
-    const screen = params.get('screen') as AppView;
-    const type = params.get('type');
-    const id = params.get('id');
-    
+  const processPaymentResult = (payment: string, screen: AppView, type: string, id: string) => {
     if (payment && screen) {
       if (Object.values(AppView).includes(screen)) {
         setCurrentView(screen);
@@ -643,10 +643,12 @@ const App: React.FC = () => {
       
       if (payment === 'success') {
         console.log('[PAYOS] Payment success return');
+        // Trigger data refresh
+        fetchData(true);
       } else if (payment === 'cancel') {
         console.log('[PAYOS] Payment cancel return');
         if (type === 'UPGRADE' && token) {
-          fetch('/payment/cancel-upgrade', {
+          fetch('/api/payment/cancel-upgrade', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -654,19 +656,45 @@ const App: React.FC = () => {
             }
           })
           .then(() => {
-            // Reload to clear state and re-fetch data, keeping the target screen
-            const newUrl = `${window.location.pathname}?screen=${screen || ''}`;
-            window.location.href = newUrl;
+            // Refresh data to clear state
+            fetchData(true);
           })
           .catch(err => console.error('Error canceling upgrade:', err));
         }
       }
+    }
+  };
+
+  // Handle PayOS return/cancel parameters from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    const screen = params.get('screen') as AppView;
+    const type = params.get('type');
+    const id = params.get('id');
+    
+    if (payment && screen) {
+      processPaymentResult(payment, screen, type || '', id || '');
       
       // Clean up URL parameters without refreshing
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
   }, []);
+
+  // Handle PayOS return/cancel from postMessage (new tab)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'PAYOS_PAYMENT_RESULT') {
+        const { payment, paymentType, id, screen } = event.data;
+        console.log('[PAYOS] Received payment result from tab:', event.data);
+        processPaymentResult(payment, screen as AppView, paymentType, id);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [token]);
 
   // Restore sub-state when data is loaded
   useEffect(() => {
@@ -1600,6 +1628,23 @@ const App: React.FC = () => {
     }
   };
 
+  const handleCancelUpgrade = async () => {
+    if (!token || !user) return;
+    try {
+      await fetch('/api/payment/cancel-upgrade', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      // Update local state
+      setUser({ ...user, pendingUpgradeRank: null });
+    } catch (err) {
+      console.error('Error canceling upgrade:', err);
+    }
+  };
+
   const handleAdminUserAction = async (userId: string, action: 'APPROVE_RANK' | 'REJECT_RANK') => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
@@ -2003,7 +2048,7 @@ const App: React.FC = () => {
             settings={settings}
           />
         );
-      case AppView.RANK_LIMITS: return <RankLimits user={user} isGlobalProcessing={isGlobalProcessing} onBack={() => setCurrentView(AppView.DASHBOARD)} onUpgrade={handleUpgradeRank} onPayOSUpgrade={(rank, amount) => handlePayOSPayment('UPGRADE', user?.id || '', amount, rank)} settings={settings} />;
+      case AppView.RANK_LIMITS: return <RankLimits user={user} isGlobalProcessing={isGlobalProcessing} onBack={() => setCurrentView(AppView.DASHBOARD)} onUpgrade={handleUpgradeRank} onPayOSUpgrade={(rank, amount) => handlePayOSPayment('UPGRADE', user?.id || '', amount, rank)} onCancelUpgrade={handleCancelUpgrade} settings={settings} />;
       case AppView.PROFILE: 
         return (
           <Profile 

@@ -25,6 +25,7 @@ interface RankLimitsProps {
   onBack: () => void;
   onUpgrade: (targetRank: UserRank, bill: string) => Promise<void> | void;
   onPayOSUpgrade: (rank: string, amount: number) => Promise<void> | void;
+  onCancelUpgrade?: () => Promise<void> | void;
   settings: AppSettings;
 }
 
@@ -33,7 +34,7 @@ enum RankView {
   PAYMENT = 'PAYMENT'
 }
 
-const RankLimits: React.FC<RankLimitsProps> = ({ user, isGlobalProcessing, onBack, onUpgrade, onPayOSUpgrade, settings }) => {
+const RankLimits: React.FC<RankLimitsProps> = ({ user, isGlobalProcessing, onBack, onUpgrade, onPayOSUpgrade, onCancelUpgrade, settings }) => {
   const [view, setView] = useState<RankView>(RankView.LIST);
   const [selectedRank, setSelectedRank] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,7 +44,7 @@ const RankLimits: React.FC<RankLimitsProps> = ({ user, isGlobalProcessing, onBac
   const ranks = [
     {
       id: 'standard',
-      name: 'USER',
+      name: 'TIÊU CHUẨN',
       code: 'USER',
       min: '1.000.000 đ',
       max: `${(Number(settings.INITIAL_LIMIT || 2000000) / 1000000).toLocaleString()} triệu đ`,
@@ -129,7 +130,10 @@ const RankLimits: React.FC<RankLimitsProps> = ({ user, isGlobalProcessing, onBac
         <div className="w-full p-3 flex items-center justify-between bg-black text-white border-b border-white/5 flex-none">
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => setView(RankView.LIST)}
+              onClick={() => {
+                if (onCancelUpgrade) onCancelUpgrade();
+                setView(RankView.LIST);
+              }}
               className="w-7 h-7 bg-white/5 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90"
             >
               <ChevronLeft size={16} />
