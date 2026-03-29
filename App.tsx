@@ -621,6 +621,15 @@ const App: React.FC = () => {
       localStorage.setItem('ndv_last_keep_alive', data.timestamp);
     });
 
+    socket.on('payment_success', (data: { message: string }) => {
+      fetchData(true);
+    });
+
+    socket.on('rank_upgrade_success', (data: { message: string }) => {
+      fetchData(true);
+      setCurrentView(AppView.DASHBOARD);
+    });
+
     return () => {
       isMounted = false;
       if (socketRef.current) {
@@ -633,7 +642,10 @@ const App: React.FC = () => {
 
   const processPaymentResult = (payment: string, screen: AppView, type: string, id: string) => {
     if (payment && screen) {
-      if (Object.values(AppView).includes(screen)) {
+      // If payment is success and it's a rank upgrade, always go to dashboard to see the new rank
+      if (payment === 'success' && type === 'UPGRADE') {
+        setCurrentView(AppView.DASHBOARD);
+      } else if (Object.values(AppView).includes(screen)) {
         setCurrentView(screen);
       }
       

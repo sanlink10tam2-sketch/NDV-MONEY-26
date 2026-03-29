@@ -1686,6 +1686,18 @@ router.post("/payment/webhook", async (req, res) => {
                 message: `Người dùng ${loan.userId} đã ${settleType === 'ALL' ? 'tất toán' : (settleType === 'PARTIAL' ? 'TTMP' : 'gia hạn')} khoản vay ${loanId} qua PayOS.`
               });
             }
+
+            // Add persistent notification
+            const notifId = `NOTIF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            await client.from('notifications').insert([{
+              id: notifId,
+              userId: loan.userId,
+              title: 'Thanh toán thành công',
+              message: `Khoản vay ${loanId} của bạn đã được ${settleType === 'ALL' ? 'tất toán' : (settleType === 'PARTIAL' ? 'thanh toán một phần' : 'gia hạn')} tự động!`,
+              time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN'),
+              read: false,
+              type: 'LOAN'
+            }]);
           }
         }
       } 
@@ -1767,6 +1779,18 @@ router.post("/payment/webhook", async (req, res) => {
                 message: `Người dùng ${user.id} đã nâng hạng lên ${targetRank.toUpperCase()} qua PayOS.`
               });
             }
+
+            // Add persistent notification
+            const notifId = `NOTIF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            await client.from('notifications').insert([{
+              id: notifId,
+              userId: user.id,
+              title: 'Nâng hạng thành công',
+              message: `Chúc mừng! Bạn đã được nâng hạng lên ${targetRank.toUpperCase()} thành công qua PayOS!`,
+              time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString('vi-VN'),
+              read: false,
+              type: 'RANK'
+            }]);
           }
         }
       }
@@ -1832,7 +1856,7 @@ router.get("/payment-result", (req, res) => {
               // Give it a moment to process before closing
               setTimeout(() => {
                 window.close();
-              }, 2000);
+              }, 500);
             } else {
               // If no opener, redirect to dashboard
               window.location.href = '/dashboard?payment=${payment}&type=${type}&id=${id}&screen=${screen}';
