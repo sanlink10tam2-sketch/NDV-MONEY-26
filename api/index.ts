@@ -286,7 +286,7 @@ const authenticateToken = async (req: any, res: any, next: any) => {
 
   if (!token) {
     // Allow login, register, and webhook without token
-    const publicRoutes = ['/login', '/register', '/api-health', '/supabase-status', '/payment/webhook', '/public-settings'];
+    const publicRoutes = ['/login', '/register', '/api-health', '/supabase-status', '/payment/webhook', '/payment-result', '/public-settings'];
     if (publicRoutes.includes(req.path)) {
       return next();
     }
@@ -305,7 +305,7 @@ const authenticateToken = async (req: any, res: any, next: any) => {
 
 // Apply auth middleware to all routes except login/register/health/webhook
 router.use(async (req, res, next) => {
-  const publicRoutes = ['/login', '/register', '/api-health', '/supabase-status', '/keep-alive', '/payment/webhook', '/public-settings'];
+  const publicRoutes = ['/login', '/register', '/api-health', '/supabase-status', '/keep-alive', '/payment/webhook', '/payment-result', '/public-settings'];
   if (publicRoutes.includes(req.path)) {
     return next();
   }
@@ -1522,19 +1522,27 @@ router.post("/payment/webhook", async (req, res) => {
 
     // Verify the webhook data
     const webhookData = await payosInstance.webhooks.verify(req.body);
+    console.log("[PAYOS] Webhook verified data:", JSON.stringify(webhookData));
     
-    if (webhookData.code === '00') {
+    if (webhookData.code === '00' || webhookData.desc === 'success') {
       const orderCode = webhookData.orderCode;
       const amount = webhookData.amount;
+      
+      console.log(`[PAYOS] Processing success for orderCode: ${orderCode}, amount: ${amount}`);
       
       // 1. Try to find a loan with this orderCode
       const { data: loan, error: loanError } = await client
         .from('loans')
         .select('*')
         .eq('payosOrderCode', orderCode)
-        .single();
+        .maybeSingle();
         
-      if (loan && !loanError) {
+      if (loanError) {
+        console.error(`[PAYOS] Error searching for loan with orderCode ${orderCode}:`, JSON.stringify(loanError));
+      }
+        
+      if (loan) {
+        console.log(`[PAYOS] Found loan: ${loan.id} for user: ${loan.userId}`);
         const settleType = loan.settlementType || 'ALL';
         const loanId = loan.id;
         
@@ -1543,10 +1551,15 @@ router.post("/payment/webhook", async (req, res) => {
           .from('loans')
           .update({ 
             status: 'ĐÃ TẤT TOÁN', 
-            settledAt: new Date().toISOString(),
             updatedAt: Date.now()
           })
           .eq('id', loanId);
+          
+        if (updateError) {
+          console.error(`[PAYOS] Error updating loan ${loanId} to settled:`, JSON.stringify(updateError));
+        } else {
+          console.log(`[PAYOS] Loan ${loanId} updated to settled successfully.`);
+        }
           
         if (!updateError) {
           const { data: user, error: userError } = await client
@@ -1593,11 +1606,11 @@ router.post("/payment/webhook", async (req, res) => {
               newMonthlyStats = [{ month: monthKey, rankProfit: 0, loanProfit: profitAmount, totalProfit: profitAmount }, ...newMonthlyStats].slice(0, 6);
             }
 
-            await client.from('system_settings').upsert([
-              { key: 'SYSTEM_BUDGET', value: newBudget.toString(), updated_at: new Date().toISOString() },
-              { key: 'TOTAL_LOAN_PROFIT', value: newLoanProfit.toString(), updated_at: new Date().toISOString() },
-              { key: 'MONTHLY_STATS', value: JSON.stringify(newMonthlyStats), updated_at: new Date().toISOString() }
-            ]);
+            await client.from('config').upsert([
+              { key: 'SYSTEM_BUDGET', value: newBudget },
+              { key: 'TOTAL_LOAN_PROFIT', value: newLoanProfit },
+              { key: 'MONTHLY_STATS', value: newMonthlyStats }
+            ], { onConflict: 'key' });
 
             // Handle different settlement types
             if (settleType === 'ALL') {
@@ -1677,13 +1690,19 @@ router.post("/payment/webhook", async (req, res) => {
       } 
       // 2. If not a loan, try to find a user with this orderCode (Rank Upgrade)
       else {
+        console.log(`[PAYOS] No loan found for orderCode ${orderCode}, searching for user upgrade...`);
         const { data: user, error: userError } = await client
           .from('users')
           .select('*')
           .eq('payosOrderCode', orderCode)
-          .single();
+          .maybeSingle();
+          
+        if (userError) {
+          console.error(`[PAYOS] Error searching for user with orderCode ${orderCode}:`, JSON.stringify(userError));
+        }
           
         if (user && !userError) {
+          console.log(`[PAYOS] Found user: ${user.id} for rank upgrade to: ${user.pendingUpgradeRank}`);
           // Process Rank Upgrade
           const targetRank = user.pendingUpgradeRank;
           if (targetRank) {
@@ -1730,11 +1749,11 @@ router.post("/payment/webhook", async (req, res) => {
               newMonthlyStats = [{ month: monthKey, rankProfit: upgradeFee, loanProfit: 0, totalProfit: upgradeFee }, ...newMonthlyStats].slice(0, 6);
             }
 
-            await client.from('system_settings').upsert([
-              { key: 'SYSTEM_BUDGET', value: newBudget.toString(), updated_at: new Date().toISOString() },
-              { key: 'TOTAL_RANK_PROFIT', value: newRankProfit.toString(), updated_at: new Date().toISOString() },
-              { key: 'MONTHLY_STATS', value: JSON.stringify(newMonthlyStats), updated_at: new Date().toISOString() }
-            ]);
+            await client.from('config').upsert([
+              { key: 'SYSTEM_BUDGET', value: newBudget },
+              { key: 'TOTAL_RANK_PROFIT', value: newRankProfit },
+              { key: 'MONTHLY_STATS', value: newMonthlyStats }
+            ], { onConflict: 'key' });
               
             const io = req.app.get("io");
             if (io) {
