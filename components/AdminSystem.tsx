@@ -21,7 +21,9 @@ import {
   Download,
   Upload,
   Search,
-  MessageCircle
+  MessageCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import BankSearchableSelect from './BankSearchableSelect';
 
@@ -53,6 +55,12 @@ const AdminSystem: React.FC<AdminSystemProps> = ({ onReset, onImportSuccess, onB
     tools: false
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
+
+  const toggleVisibility = (field: string) => {
+    setVisibleFields(prev => ({ ...prev, [field]: !prev[field] }));
+  };
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => {
@@ -629,21 +637,39 @@ END $$;`;
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Supabase URL</label>
-                        <input 
-                          type="text" 
-                          value={localSettings.SUPABASE_URL || ''}
-                          onChange={(e) => setLocalSettings({...localSettings, SUPABASE_URL: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                        />
+                        <div className="relative">
+                          <input 
+                            type={visibleFields['supabase_url'] ? "text" : "password"} 
+                            value={localSettings.SUPABASE_URL || ''}
+                            onChange={(e) => setLocalSettings({...localSettings, SUPABASE_URL: e.target.value})}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleVisibility('supabase_url')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                          >
+                            {visibleFields['supabase_url'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Service Role Key</label>
-                        <input 
-                          type="password" 
-                          value={localSettings.SUPABASE_SERVICE_ROLE_KEY || ''}
-                          onChange={(e) => setLocalSettings({...localSettings, SUPABASE_SERVICE_ROLE_KEY: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                        />
+                        <div className="relative">
+                          <input 
+                            type={visibleFields['supabase_key'] ? "text" : "password"} 
+                            value={localSettings.SUPABASE_SERVICE_ROLE_KEY || ''}
+                            onChange={(e) => setLocalSettings({...localSettings, SUPABASE_SERVICE_ROLE_KEY: e.target.value})}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleVisibility('supabase_key')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                          >
+                            {visibleFields['supabase_key'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -653,12 +679,21 @@ END $$;`;
                     <h6 className="text-[7px] font-black text-gray-500 uppercase tracking-[0.2em]">Lưu trữ hình ảnh (ImgBB)</h6>
                     <div className="space-y-2">
                       <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">ImgBB API Key</label>
-                      <input 
-                        type="text" 
-                        value={localSettings.IMGBB_API_KEY || ''}
-                        onChange={(e) => setLocalSettings({...localSettings, IMGBB_API_KEY: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                      />
+                      <div className="relative">
+                        <input 
+                          type={visibleFields['imgbb_key'] ? "text" : "password"} 
+                          value={localSettings.IMGBB_API_KEY || ''}
+                          onChange={(e) => setLocalSettings({...localSettings, IMGBB_API_KEY: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleVisibility('imgbb_key')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                        >
+                          {visibleFields['imgbb_key'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -668,45 +703,83 @@ END $$;`;
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Client ID</label>
-                        <input 
-                          type="text" 
-                          value={localSettings.PAYOS_CLIENT_ID || ''}
-                          onChange={(e) => setLocalSettings({...localSettings, PAYOS_CLIENT_ID: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                        />
+                        <div className="relative">
+                          <input 
+                            type={visibleFields['payos_client'] ? "text" : "password"} 
+                            value={localSettings.PAYOS_CLIENT_ID || ''}
+                            onChange={(e) => setLocalSettings({...localSettings, PAYOS_CLIENT_ID: e.target.value})}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleVisibility('payos_client')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                          >
+                            {visibleFields['payos_client'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">API Key</label>
-                        <input 
-                          type="password" 
-                          value={localSettings.PAYOS_API_KEY || ''}
-                          onChange={(e) => setLocalSettings({...localSettings, PAYOS_API_KEY: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                        />
+                        <div className="relative">
+                          <input 
+                            type={visibleFields['payos_api'] ? "text" : "password"} 
+                            value={localSettings.PAYOS_API_KEY || ''}
+                            onChange={(e) => setLocalSettings({...localSettings, PAYOS_API_KEY: e.target.value})}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleVisibility('payos_api')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                          >
+                            {visibleFields['payos_api'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Checksum Key</label>
-                      <input 
-                        type="password" 
-                        value={localSettings.PAYOS_CHECKSUM_KEY || ''}
-                        onChange={(e) => setLocalSettings({...localSettings, PAYOS_CHECKSUM_KEY: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                      />
+                      <div className="relative">
+                        <input 
+                          type={visibleFields['payos_checksum'] ? "text" : "password"} 
+                          value={localSettings.PAYOS_CHECKSUM_KEY || ''}
+                          onChange={(e) => setLocalSettings({...localSettings, PAYOS_CHECKSUM_KEY: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleVisibility('payos_checksum')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                        >
+                          {visibleFields['payos_checksum'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* JWT Secret */}
+                  {/* JWT Secret & ImgBB */}
                   <div className="space-y-4 pt-4 border-t border-white/5">
                     <h6 className="text-[7px] font-black text-gray-500 uppercase tracking-[0.2em]">Hệ thống & Bảo mật</h6>
-                    <div className="space-y-2">
-                      <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">JWT Secret Key</label>
-                      <input 
-                        type="password" 
-                        value={localSettings.JWT_SECRET || ''}
-                        onChange={(e) => setLocalSettings({...localSettings, JWT_SECRET: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 col-span-full">
+                        <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">JWT Secret Key</label>
+                        <div className="relative">
+                          <input 
+                            type={visibleFields['jwt_secret'] ? "text" : "password"} 
+                            value={localSettings.JWT_SECRET || ''}
+                            onChange={(e) => setLocalSettings({...localSettings, JWT_SECRET: e.target.value})}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleVisibility('jwt_secret')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                          >
+                            {visibleFields['jwt_secret'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -733,21 +806,39 @@ END $$;`;
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Số điện thoại Admin</label>
-                      <input 
-                        type="text" 
-                        value={localSettings.ADMIN_PHONE || ''}
-                        onChange={(e) => setLocalSettings({...localSettings, ADMIN_PHONE: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                      />
+                      <div className="relative">
+                        <input 
+                          type={visibleFields['admin_phone'] ? "text" : "password"} 
+                          value={localSettings.ADMIN_PHONE || ''}
+                          onChange={(e) => setLocalSettings({...localSettings, ADMIN_PHONE: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleVisibility('admin_phone')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                        >
+                          {visibleFields['admin_phone'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Mật khẩu Admin</label>
-                      <input 
-                        type="password" 
-                        value={localSettings.ADMIN_PASSWORD || ''}
-                        onChange={(e) => setLocalSettings({...localSettings, ADMIN_PASSWORD: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
-                      />
+                      <div className="relative">
+                        <input 
+                          type={visibleFields['admin_password'] ? "text" : "password"} 
+                          value={localSettings.ADMIN_PASSWORD || ''}
+                          onChange={(e) => setLocalSettings({...localSettings, ADMIN_PASSWORD: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleVisibility('admin_password')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                        >
+                          {visibleFields['admin_password'] ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -852,7 +943,7 @@ END $$;`;
                             ...localSettings, 
                             PAYMENT_ACCOUNT: { ...(localSettings.PAYMENT_ACCOUNT || {}), accountNumber: e.target.value.replace(/\D/g, '') }
                           })}
-                          className="bg-black border border-white/10 rounded-xl px-3 py-2 text-[9px] font-bold text-white outline-none"
+                          className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-[9px] font-bold text-white outline-none"
                         />
                       </div>
                       <div className="flex gap-2">
@@ -863,7 +954,7 @@ END $$;`;
                             ...localSettings, 
                             PAYMENT_ACCOUNT: { ...(localSettings.PAYMENT_ACCOUNT || {}), accountName: e.target.value.toUpperCase() }
                           })}
-                          className="flex-1 bg-black border border-white/10 rounded-xl px-3 py-2 text-[9px] font-black text-[#ff8c00] uppercase outline-none"
+                          className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-[9px] font-black text-[#ff8c00] uppercase outline-none"
                         />
                       </div>
                     </div>
@@ -1091,16 +1182,6 @@ END $$;`;
                       inputMode="numeric"
                       value={formatNumberWithDots(localSettings.MAX_SINGLE_LOAN_AMOUNT)}
                       onChange={(e) => setLocalSettings({...localSettings, MAX_SINGLE_LOAN_AMOUNT: parseNumberFromDots(e.target.value)})}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-[10px] font-bold text-white outline-none focus:border-[#ff8c00]/50 focus:bg-white/10 transition-all"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[7px] font-black text-gray-500 uppercase tracking-widest px-1">Hạn mức Hạng USER</label>
-                    <input 
-                      type="text" 
-                      inputMode="numeric"
-                      value={formatNumberWithDots(localSettings.INITIAL_LIMIT)}
-                      onChange={(e) => setLocalSettings({...localSettings, INITIAL_LIMIT: parseNumberFromDots(e.target.value)})}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-[10px] font-bold text-white outline-none focus:border-[#ff8c00]/50 focus:bg-white/10 transition-all"
                     />
                   </div>

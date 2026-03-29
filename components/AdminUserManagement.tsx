@@ -382,7 +382,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, loans,
                            <div className="aspect-video w-full bg-black rounded-xl border border-white/5 overflow-hidden group/img relative cursor-zoom-in" onClick={() => u.rankUpgradeBill && setZoomImage(u.rankUpgradeBill)}>
                               {u.rankUpgradeBill ? (
                                 <>
-                                  <img src={u.rankUpgradeBill} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" alt="Upgrade bill" />
+                                  <img src={u.rankUpgradeBill} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" alt="Upgrade bill" referrerPolicy="no-referrer" />
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                                     <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
                                       <Maximize2 size={20} />
@@ -487,7 +487,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, loans,
                             <div className="aspect-video w-full bg-black rounded-xl border border-white/5 overflow-hidden flex items-center justify-center group/img relative cursor-zoom-in" onClick={() => u.idFront && setZoomImage(u.idFront)}>
                               {u.idFront ? (
                                 <>
-                                  <img src={u.idFront} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" alt="CCCD Front" />
+                                  <img src={u.idFront} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" alt="CCCD Front" referrerPolicy="no-referrer" />
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                                     <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
                                       <Maximize2 size={20} />
@@ -504,7 +504,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, loans,
                             <div className="aspect-video w-full bg-black rounded-xl border border-white/5 overflow-hidden flex items-center justify-center group/img relative cursor-zoom-in" onClick={() => u.idBack && setZoomImage(u.idBack)}>
                               {u.idBack ? (
                                 <>
-                                  <img src={u.idBack} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" alt="CCCD Back" />
+                                  <img src={u.idBack} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" alt="CCCD Back" referrerPolicy="no-referrer" />
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                                     <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
                                       <Maximize2 size={20} />
@@ -627,7 +627,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, loans,
                                      <div className="aspect-video w-full bg-black rounded-lg overflow-hidden border border-white/5 group/img relative cursor-zoom-in" onClick={() => loan.billImage && setZoomImage(loan.billImage)}>
                                         {loan.billImage ? (
                                           <>
-                                            <img src={loan.billImage} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" alt="Bill payment" />
+                                            <img src={loan.billImage} className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" alt="Bill payment" referrerPolicy="no-referrer" />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                                               <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
                                                 <Maximize2 size={20} />
@@ -994,6 +994,7 @@ const AdminUserManagement: React.FC<AdminUserManagementProps> = ({ users, loans,
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in duration-500" 
             alt="Zoomed bill" 
             onClick={(e) => e.stopPropagation()}
+            referrerPolicy="no-referrer"
           />
         </div>
       )}

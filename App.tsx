@@ -950,10 +950,10 @@ const App: React.FC = () => {
       let idBackUrl = userData.idBack;
 
       if (userData.idFront && userData.idFront.startsWith('data:image')) {
-        idFrontUrl = await uploadToImgBB(userData.idFront, `MT_${newUserId}_${Date.now()}`);
+        idFrontUrl = await uploadToImgBB(userData.idFront, `MT_${newUserId}_${Date.now()}`, settings.IMGBB_API_KEY);
       }
       if (userData.idBack && userData.idBack.startsWith('data:image')) {
-        idBackUrl = await uploadToImgBB(userData.idBack, `MS_${newUserId}_${Date.now()}`);
+        idBackUrl = await uploadToImgBB(userData.idBack, `MS_${newUserId}_${Date.now()}`, settings.IMGBB_API_KEY);
       }
 
       const initialLimit = Number(settings.INITIAL_LIMIT || 2000000);
@@ -1969,7 +1969,7 @@ const App: React.FC = () => {
           onToggleRememberMe={setRememberMe}
         />
       );
-      case AppView.REGISTER: return <Register onBack={() => setCurrentView(AppView.LOGIN)} onRegister={handleRegister} onClearError={() => setRegisterError(null)} error={registerError} />;
+      case AppView.REGISTER: return <Register onBack={() => setCurrentView(AppView.LOGIN)} onRegister={handleRegister} onClearError={() => setRegisterError(null)} error={registerError} settings={settings} />;
       case AppView.DASHBOARD: 
         return (
           <Dashboard 

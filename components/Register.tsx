@@ -15,7 +15,7 @@ import {
   EyeOff,
   AlertCircle
 } from 'lucide-react';
-import { User as UserType } from '../types';
+import { User as UserType, AppSettings } from '../types';
 import { compressImage, uploadToImgBB } from '../utils';
 
 import TermsModal from './TermsModal';
@@ -25,9 +25,10 @@ interface RegisterProps {
   onRegister: (userData: Partial<UserType>) => Promise<void> | void;
   onClearError?: () => void;
   error?: string | null;
+  settings: AppSettings;
 }
 
-const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, error }) => {
+const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, error, settings }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     idNumber: '',
@@ -128,7 +129,7 @@ const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, e
           const compressed = await compressImage(reader.result as string, 800, 800);
           // Tải lên ImgBB ngay sau khi nén, thêm prefix ID để dễ quản lý
           const fileName = `${side === 'front' ? 'MT' : 'MS'}_${formData.zaloPhone || 'new'}_${Date.now()}`;
-          const imageUrl = await uploadToImgBB(compressed, fileName);
+          const imageUrl = await uploadToImgBB(compressed, fileName, settings.IMGBB_API_KEY);
           
           if (side === 'front') setIdFront(imageUrl);
           else setIdBack(imageUrl);
