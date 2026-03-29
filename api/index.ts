@@ -1128,14 +1128,14 @@ const USER_SUMMARY_COLUMNS = [
 const LOAN_COLUMNS = [
   'id', 'userId', 'userName', 'amount', 'date', 'createdAt', 'status', 
   'fine', 'billImage', 'bankTransactionId', 'signature', 'rejectionReason', 
-  'settlementType', 'partialAmount', 'principalPaymentCount', 'extensionCount', 
+  'settlementType', 'partialAmount', 'principalPaymentCount', 'extensionCount', 'settledAt', 
   'payosOrderCode', 'payosCheckoutUrl', 'payosAmount', 'payosExpireAt', 'updatedAt'
 ];
 
 const LOAN_SUMMARY_COLUMNS = [
   'id', 'userId', 'userName', 'amount', 'date', 'createdAt', 'status', 
   'fine', 'bankTransactionId', 'rejectionReason', 
-  'settlementType', 'partialAmount', 'principalPaymentCount', 'extensionCount', 'updatedAt'
+  'settlementType', 'partialAmount', 'principalPaymentCount', 'extensionCount', 'settledAt', 'updatedAt'
 ];
 
 const NOTIFICATION_COLUMNS = [
@@ -1551,6 +1551,7 @@ router.post("/payment/webhook", async (req, res) => {
           .from('loans')
           .update({ 
             status: 'ĐÃ TẤT TOÁN', 
+            settledAt: new Date().toISOString(),
             updatedAt: Date.now()
           })
           .eq('id', loanId);

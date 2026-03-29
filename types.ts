@@ -78,6 +78,7 @@ export interface LoanRecord {
   partialAmount?: number;
   principalPaymentCount?: number;
   extensionCount?: number;
+  settledAt?: string;
   payosOrderCode?: number;
   payosCheckoutUrl?: string;
   payosExpireAt?: number;
