@@ -1525,10 +1525,27 @@ router.post("/payment/webhook", async (req, res) => {
     console.log("[PAYOS] Webhook verified data:", JSON.stringify(webhookData));
     
     if (webhookData.code === '00' || webhookData.desc === 'success') {
+      // Get current settings for statistics update
+      const { data: config } = await client.from('config').select('*');
+      const settings: any = {};
+      config?.forEach(item => {
+        // Ensure numeric values are parsed as numbers for calculation
+        if (['SYSTEM_BUDGET', 'TOTAL_LOAN_PROFIT', 'TOTAL_RANK_PROFIT', 'MIN_SYSTEM_BUDGET'].includes(item.key)) {
+          settings[item.key] = Number(item.value) || 0;
+        } else if (item.key === 'MONTHLY_STATS') {
+          try {
+            settings[item.key] = typeof item.value === 'string' ? JSON.parse(item.value) : (item.value || []);
+          } catch (e) {
+            settings[item.key] = [];
+          }
+        } else {
+          settings[item.key] = item.value;
+        }
+      });
+
       const orderCode = webhookData.orderCode;
       const amount = webhookData.amount;
-      
-      console.log(`[PAYOS] Processing success for orderCode: ${orderCode}, amount: ${amount}`);
+      console.log(`[PAYOS] Webhook verified data for orderCode: ${orderCode}, amount: ${amount}`);
       
       // 1. Try to find a loan with this orderCode
       const { data: loan, error: loanError } = await client
@@ -1590,27 +1607,27 @@ router.post("/payment/webhook", async (req, res) => {
             }
 
             // Update system stats
-            const newBudget = (settings.SYSTEM_BUDGET || 0) + budgetUpdate;
-            const newLoanProfit = (settings.TOTAL_LOAN_PROFIT || 0) + profitAmount;
+            const newBudget = (Number(settings.SYSTEM_BUDGET) || 0) + budgetUpdate;
+            const newLoanProfit = (Number(settings.TOTAL_LOAN_PROFIT) || 0) + profitAmount;
             
-            let newMonthlyStats = [...(settings.MONTHLY_STATS || [])];
+            let newMonthlyStats = Array.isArray(settings.MONTHLY_STATS) ? [...settings.MONTHLY_STATS] : [];
             const now = new Date();
             const monthKey = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
             const existingIdx = newMonthlyStats.findIndex((s: any) => s.month === monthKey);
             
             if (existingIdx !== -1) {
               const stat = { ...newMonthlyStats[existingIdx] };
-              stat.loanProfit = (stat.loanProfit || 0) + profitAmount;
-              stat.totalProfit = (stat.rankProfit || 0) + (stat.loanProfit || 0);
+              stat.loanProfit = (Number(stat.loanProfit) || 0) + profitAmount;
+              stat.totalProfit = (Number(stat.rankProfit) || 0) + (Number(stat.loanProfit) || 0);
               newMonthlyStats[existingIdx] = stat;
             } else {
               newMonthlyStats = [{ month: monthKey, rankProfit: 0, loanProfit: profitAmount, totalProfit: profitAmount }, ...newMonthlyStats].slice(0, 6);
             }
 
             await client.from('config').upsert([
-              { key: 'SYSTEM_BUDGET', value: newBudget },
-              { key: 'TOTAL_LOAN_PROFIT', value: newLoanProfit },
-              { key: 'MONTHLY_STATS', value: newMonthlyStats }
+              { key: 'SYSTEM_BUDGET', value: newBudget.toString() },
+              { key: 'TOTAL_LOAN_PROFIT', value: newLoanProfit.toString() },
+              { key: 'MONTHLY_STATS', value: JSON.stringify(newMonthlyStats) }
             ], { onConflict: 'key' });
 
             // Handle different settlement types
@@ -1745,31 +1762,35 @@ router.post("/payment/webhook", async (req, res) => {
               .eq('id', user.id);
 
             // Update system stats
-            const newBudget = (settings.SYSTEM_BUDGET || 0) + upgradeFee;
-            const newRankProfit = (settings.TOTAL_RANK_PROFIT || 0) + upgradeFee;
+            const newBudget = (Number(settings.SYSTEM_BUDGET) || 0) + upgradeFee;
+            const newRankProfit = (Number(settings.TOTAL_RANK_PROFIT) || 0) + upgradeFee;
             
-            let newMonthlyStats = [...(settings.MONTHLY_STATS || [])];
+            let newMonthlyStats = Array.isArray(settings.MONTHLY_STATS) ? [...settings.MONTHLY_STATS] : [];
             const now = new Date();
             const monthKey = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
             const existingIdx = newMonthlyStats.findIndex((s: any) => s.month === monthKey);
             
             if (existingIdx !== -1) {
               const stat = { ...newMonthlyStats[existingIdx] };
-              stat.rankProfit = (stat.rankProfit || 0) + upgradeFee;
-              stat.totalProfit = (stat.rankProfit || 0) + (stat.loanProfit || 0);
+              stat.rankProfit = (Number(stat.rankProfit) || 0) + upgradeFee;
+              stat.totalProfit = (Number(stat.rankProfit) || 0) + (Number(stat.loanProfit) || 0);
               newMonthlyStats[existingIdx] = stat;
             } else {
               newMonthlyStats = [{ month: monthKey, rankProfit: upgradeFee, loanProfit: 0, totalProfit: upgradeFee }, ...newMonthlyStats].slice(0, 6);
             }
 
             await client.from('config').upsert([
-              { key: 'SYSTEM_BUDGET', value: newBudget },
-              { key: 'TOTAL_RANK_PROFIT', value: newRankProfit },
-              { key: 'MONTHLY_STATS', value: newMonthlyStats }
+              { key: 'SYSTEM_BUDGET', value: newBudget.toString() },
+              { key: 'TOTAL_RANK_PROFIT', value: newRankProfit.toString() },
+              { key: 'MONTHLY_STATS', value: JSON.stringify(newMonthlyStats) }
             ], { onConflict: 'key' });
               
             const io = req.app.get("io");
             if (io) {
+              io.to(`user_${user.id}`).emit("payment_success", { 
+                type: 'UPGRADE',
+                message: `Chúc mừng! Bạn đã được nâng hạng lên ${targetRank.toUpperCase()} thành công!` 
+              });
               io.to(`user_${user.id}`).emit("rank_upgrade_success", { 
                 rank: targetRank, 
                 message: `Chúc mừng! Bạn đã được nâng hạng lên ${targetRank.toUpperCase()} thành công!` 

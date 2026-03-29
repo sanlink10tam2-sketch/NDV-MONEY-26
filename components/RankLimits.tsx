@@ -97,6 +97,13 @@ const RankLimits: React.FC<RankLimitsProps> = ({ user, isGlobalProcessing, onBac
   const currentRankIndex = ranks.findIndex(r => r.id === (user?.rank || 'standard'));
 
   useEffect(() => {
+    // If rank has already been upgraded while in payment view, go back
+    if (view === RankView.PAYMENT && selectedRank && user?.rank === selectedRank.id) {
+      onBack();
+    }
+  }, [user?.rank, view, selectedRank, onBack]);
+
+  useEffect(() => {
     // Restore state if returning from PayOS or has pending PayOS upgrade
     if (user?.pendingUpgradeRank && view === RankView.LIST) {
       const pendingRank = ranks.find(r => r.id === user.pendingUpgradeRank);

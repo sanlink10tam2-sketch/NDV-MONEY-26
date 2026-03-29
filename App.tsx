@@ -621,8 +621,12 @@ const App: React.FC = () => {
       localStorage.setItem('ndv_last_keep_alive', data.timestamp);
     });
 
-    socket.on('payment_success', (data: { message: string }) => {
+    socket.on('payment_success', (data: { message: string, type?: string }) => {
+      console.log('[SOCKET] Payment success:', data);
       fetchData(true);
+      if (data.type === 'UPGRADE') {
+        setCurrentView(AppView.DASHBOARD);
+      }
     });
 
     socket.on('rank_upgrade_success', (data: { message: string }) => {
@@ -640,26 +644,32 @@ const App: React.FC = () => {
 
   const [pendingPaymentRestore, setPendingPaymentRestore] = useState<{ type: string, id: string, screen: AppView } | null>(null);
 
-  const processPaymentResult = useCallback((payment: string, screen: AppView, type: string, id: string) => {
-    if (payment && screen) {
-      // If payment is success and it's a rank upgrade, always go to dashboard to see the new rank
-      if (payment === 'success' && type === 'UPGRADE') {
-        setCurrentView(AppView.DASHBOARD);
-      } else if (Object.values(AppView).includes(screen)) {
-        setCurrentView(screen);
-      }
+  const processPaymentResult = useCallback((payment: string, screen: AppView | string, type: string, id: string) => {
+    if (payment) {
+      console.log(`[PAYOS] Processing result: payment=${payment}, type=${type}, screen=${screen}`);
       
-      if (type && id) {
-        setPendingPaymentRestore({ type, id, screen });
-      }
+      const isUpgrade = type?.toUpperCase() === 'UPGRADE' || screen === AppView.RANK_LIMITS;
       
       if (payment === 'success') {
-        console.log('[PAYOS] Payment success return');
+        // If it's a successful upgrade or we are on the rank limits screen, always go to Dashboard
+        if (isUpgrade) {
+          console.log('[PAYOS] Upgrade success or from RankLimits, redirecting to Dashboard');
+          setCurrentView(AppView.DASHBOARD);
+        } else if (screen && Object.values(AppView).includes(screen as AppView)) {
+          setCurrentView(screen as AppView);
+        } else {
+          setCurrentView(AppView.DASHBOARD);
+        }
+        
         // Trigger data refresh
         fetchData(true);
       } else if (payment === 'cancel') {
-        console.log('[PAYOS] Payment cancel return');
-        if (type === 'UPGRADE' && token) {
+        console.log('[PAYOS] Payment cancelled');
+        if (screen && Object.values(AppView).includes(screen as AppView)) {
+          setCurrentView(screen as AppView);
+        }
+        
+        if (isUpgrade && token) {
           fetch('/api/payment/cancel-upgrade', {
             method: 'POST',
             headers: {
@@ -668,11 +678,14 @@ const App: React.FC = () => {
             }
           })
           .then(() => {
-            // Refresh data to clear state
             fetchData(true);
           })
           .catch(err => console.error('Error canceling upgrade:', err));
         }
+      }
+      
+      if (type && id) {
+        setPendingPaymentRestore({ type, id, screen: (screen as AppView) || AppView.DASHBOARD });
       }
     }
   }, [token, fetchData]);
@@ -685,8 +698,13 @@ const App: React.FC = () => {
     const type = params.get('type');
     const id = params.get('id');
     
-    if (payment && screen) {
-      processPaymentResult(payment, screen, type || '', id || '');
+    if (payment) {
+      // Clean up 'undefined' strings from URL parameters
+      const cleanType = type === 'undefined' ? '' : type;
+      const cleanId = id === 'undefined' ? '' : id;
+      const cleanScreen = (screen as string) === 'undefined' ? '' : screen;
+      
+      processPaymentResult(payment, cleanScreen || '', cleanType || '', cleanId || '');
       
       // Clean up URL parameters without refreshing
       const newUrl = window.location.pathname;
