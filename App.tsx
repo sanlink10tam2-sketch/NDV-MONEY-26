@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AppView, User, UserRank, LoanRecord, Notification, MonthlyStat, AppSettings } from './types';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -124,7 +124,7 @@ const App: React.FC = () => {
     setCurrentView(AppView.LOGIN);
   };
 
-  const authenticatedFetch = async (url: string, options: RequestInit = {}, retries = 2) => {
+  const authenticatedFetch = useCallback(async (url: string, options: RequestInit = {}, retries = 2) => {
     if (!token && !url.includes('/api/login') && !url.includes('/api/register')) {
       return new Response(JSON.stringify({ error: "Yêu cầu xác thực" }), { status: 401 });
     }
@@ -167,7 +167,7 @@ const App: React.FC = () => {
       }
     }
     throw lastError;
-  };
+  }, [token, currentView]);
   const [loans, setLoans] = useState<LoanRecord[]>(() => {
     const saved = localStorage.getItem('ndv_loans');
     return saved ? JSON.parse(saved) : [];
@@ -332,7 +332,7 @@ const App: React.FC = () => {
     }
   }, [user]);
 
-  const fetchData = async (isInitial = false, fetchFull = false) => {
+  const fetchData = useCallback(async (isInitial = false, fetchFull = false) => {
     if (isGlobalProcessing) return;
     
     if (!user || !token) {
@@ -470,7 +470,7 @@ const App: React.FC = () => {
       if (isInitial) setIsInitialized(true);
       setIsGlobalProcessing(false);
     }
-  };
+  }, [user?.id, user?.isAdmin, token, authenticatedFetch, isGlobalProcessing]);
 
   useEffect(() => {
     let isMounted = true;
@@ -640,7 +640,7 @@ const App: React.FC = () => {
 
   const [pendingPaymentRestore, setPendingPaymentRestore] = useState<{ type: string, id: string, screen: AppView } | null>(null);
 
-  const processPaymentResult = (payment: string, screen: AppView, type: string, id: string) => {
+  const processPaymentResult = useCallback((payment: string, screen: AppView, type: string, id: string) => {
     if (payment && screen) {
       // If payment is success and it's a rank upgrade, always go to dashboard to see the new rank
       if (payment === 'success' && type === 'UPGRADE') {
@@ -675,7 +675,7 @@ const App: React.FC = () => {
         }
       }
     }
-  };
+  }, [token, fetchData]);
 
   // Handle PayOS return/cancel parameters from URL
   useEffect(() => {
@@ -692,7 +692,7 @@ const App: React.FC = () => {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
-  }, []);
+  }, [processPaymentResult]);
 
   // Handle PayOS return/cancel from postMessage (new tab)
   useEffect(() => {
@@ -706,7 +706,7 @@ const App: React.FC = () => {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [token]);
+  }, [processPaymentResult]);
 
   // Restore sub-state when data is loaded
   useEffect(() => {

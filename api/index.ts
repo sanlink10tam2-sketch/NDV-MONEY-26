@@ -819,10 +819,10 @@ router.get("/data", async (req, res) => {
     const end = Date.now();
     console.log(`[API] Data fetch took ${end - start}ms. Users: ${users.length}, Loans: ${loans.length}`);
 
-    const budget = Number(config?.find(c => c.key === 'budget')?.value) || 30000000;
-    const rankProfit = Number(config?.find(c => c.key === 'rankProfit')?.value) || 0;
-    const loanProfit = Number(config?.find(c => c.key === 'loanProfit')?.value) || 0;
-    const monthlyStats = config?.find(c => c.key === 'monthlyStats')?.value || [];
+    const budget = Number(config?.find(c => c.key === 'SYSTEM_BUDGET')?.value || config?.find(c => c.key === 'budget')?.value) || 30000000;
+    const rankProfit = Number(config?.find(c => c.key === 'TOTAL_RANK_PROFIT')?.value || config?.find(c => c.key === 'rankProfit')?.value) || 0;
+    const loanProfit = Number(config?.find(c => c.key === 'TOTAL_LOAN_PROFIT')?.value || config?.find(c => c.key === 'loanProfit')?.value) || 0;
+    const monthlyStats = config?.find(c => c.key === 'MONTHLY_STATS')?.value || config?.find(c => c.key === 'monthlyStats')?.value || [];
     const lastKeepAlive = config?.find(c => c.key === 'lastKeepAlive')?.value || null;
 
     const payload = {
@@ -1207,10 +1207,10 @@ router.post("/sync", async (req, res) => {
     }
     
     const configUpdates = [];
-    if (budget !== undefined) configUpdates.push({ key: 'budget', value: budget });
-    if (rankProfit !== undefined) configUpdates.push({ key: 'rankProfit', value: rankProfit });
-    if (loanProfit !== undefined) configUpdates.push({ key: 'loanProfit', value: loanProfit });
-    if (monthlyStats !== undefined) configUpdates.push({ key: 'monthlyStats', value: monthlyStats });
+    if (budget !== undefined) configUpdates.push({ key: 'SYSTEM_BUDGET', value: budget });
+    if (rankProfit !== undefined) configUpdates.push({ key: 'TOTAL_RANK_PROFIT', value: rankProfit });
+    if (loanProfit !== undefined) configUpdates.push({ key: 'TOTAL_LOAN_PROFIT', value: loanProfit });
+    if (monthlyStats !== undefined) configUpdates.push({ key: 'MONTHLY_STATS', value: monthlyStats });
     
     if (configUpdates.length > 0) {
       const { error } = await client.from('config').upsert(configUpdates, { onConflict: 'key' });
