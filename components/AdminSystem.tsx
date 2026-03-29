@@ -12,6 +12,7 @@ import {
   Shield, 
   CreditCard, 
   Wrench, 
+  Globe,
   AlertCircle, 
   Loader2, 
   X, 
@@ -44,7 +45,7 @@ const AdminSystem: React.FC<AdminSystemProps> = ({ onReset, onImportSuccess, onB
   const [settingsMessage, setSettingsMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    connection: true,
+    connection: false,
     admin: false,
     formats: false,
     payment: false,
@@ -959,6 +960,21 @@ END $$;`;
                       <span className="text-[9px] font-black text-white uppercase tracking-widest">Lấy Webhook</span>
                     </div>
                     {copiedField === 'webhook' ? (
+                      <Check size={14} className="text-green-500" />
+                    ) : (
+                      <Copy size={14} className="text-gray-500 group-hover:text-white transition-colors" />
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => copyToClipboard(window.location.origin, 'appurl')}
+                    className="flex items-center justify-between px-4 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Globe size={14} className="text-[#ff8c00]" />
+                      <span className="text-[9px] font-black text-white uppercase tracking-widest">Lấy APP URL</span>
+                    </div>
+                    {copiedField === 'appurl' ? (
                       <Check size={14} className="text-green-500" />
                     ) : (
                       <Copy size={14} className="text-gray-500 group-hover:text-white transition-colors" />
