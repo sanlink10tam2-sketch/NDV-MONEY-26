@@ -1420,13 +1420,16 @@ router.post("/payment/create-link", async (req, res) => {
         let template = "";
         let loanData: any = null;
         
-        if (settleType === 'PARTIAL') {
-          template = settings.PAYMENT_CONTENT_PARTIAL_SETTLEMENT || "TTMP {ID}";
-        } else if (settleType === 'PRINCIPAL') {
-          template = settings.PAYMENT_CONTENT_EXTENSION || "GIA HAN {ID}";
-          // Fetch loan to get extension count
+        if (settleType === 'PARTIAL' || settleType === 'PRINCIPAL') {
+          // Fetch loan to get extension count for both Partial and Principal (Extension)
           const { data } = await client.from('loans').select('extensionCount').eq('id', id).single();
           loanData = data;
+          
+          if (settleType === 'PARTIAL') {
+            template = settings.PAYMENT_CONTENT_PARTIAL_SETTLEMENT || "TTMP {ID}";
+          } else {
+            template = settings.PAYMENT_CONTENT_EXTENSION || "GIA HAN {ID}";
+          }
         } else {
           template = settings.PAYMENT_CONTENT_FULL_SETTLEMENT || "TAT TOAN {ID}";
         }
