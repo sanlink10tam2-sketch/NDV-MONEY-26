@@ -658,16 +658,26 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Thiếu thông tin đăng ký" });
     }
 
-    // Check if user already exists
-    const { data: existingUser, error: checkError } = await client
-      .from('users')
-      .select('id')
-      .eq('phone', userData.phone)
-      .limit(1);
+    // Check if user already exists (by phone, Zalo, or ID Number)
+    let query = client.from('users').select('id, phone, "refZalo", "idNumber"');
+    const conditions = [`phone.eq.${userData.phone}`];
+    if (userData.refZalo) conditions.push(`refZalo.eq.${userData.refZalo}`);
+    if (userData.idNumber) conditions.push(`idNumber.eq.${userData.idNumber}`);
+    
+    query = query.or(conditions.join(','));
+    
+    const { data: existingUsers, error: checkError } = await query.limit(1);
     
     if (checkError) throw checkError;
-    if (existingUser && existingUser.length > 0) {
-      return res.status(400).json({ error: "Số điện thoại này đã được đăng ký." });
+    if (existingUsers && existingUsers.length > 0) {
+      const existing = existingUsers[0];
+      if (existing.phone === userData.phone) {
+        return res.status(400).json({ error: "Số điện thoại này đã được đăng ký." });
+      } else if (userData.refZalo && existing.refZalo === userData.refZalo) {
+        return res.status(400).json({ error: "Số Zalo này đã được sử dụng bởi một tài khoản khác." });
+      } else {
+        return res.status(400).json({ error: "Số CCCD/CMND này đã được sử dụng bởi một tài khoản khác." });
+      }
     }
 
     // Hash password
@@ -1128,14 +1138,14 @@ const USER_SUMMARY_COLUMNS = [
 const LOAN_COLUMNS = [
   'id', 'userId', 'userName', 'amount', 'date', 'createdAt', 'status', 
   'fine', 'billImage', 'bankTransactionId', 'signature', 'rejectionReason', 
-  'settlementType', 'partialAmount', 'principalPaymentCount', 'extensionCount', 'settledAt', 
+  'settlementType', 'partialAmount', 'principalPaymentCount', 'extensionCount', 'partialPaymentCount',
   'payosOrderCode', 'payosCheckoutUrl', 'payosAmount', 'payosExpireAt', 'updatedAt'
 ];
 
 const LOAN_SUMMARY_COLUMNS = [
   'id', 'userId', 'userName', 'amount', 'date', 'createdAt', 'status', 
   'fine', 'bankTransactionId', 'rejectionReason', 
-  'settlementType', 'partialAmount', 'principalPaymentCount', 'extensionCount', 'settledAt', 'updatedAt'
+  'settlementType', 'partialAmount', 'principalPaymentCount', 'extensionCount', 'partialPaymentCount', 'updatedAt'
 ];
 
 const NOTIFICATION_COLUMNS = [
@@ -1604,8 +1614,8 @@ router.post("/payment/webhook", async (req, res) => {
             } else if (settleType === 'PARTIAL') {
               const pAmount = loan.partialAmount || 0;
               const remainingPrincipal = loan.amount - pAmount;
-              profitAmount = (loan.amount * feePercent) + fine;
-              budgetUpdate = pAmount + (remainingPrincipal * feePercent) + fine;
+              profitAmount = (remainingPrincipal * feePercent) + fine;
+              budgetUpdate = pAmount + profitAmount;
             } else {
               profitAmount = fine;
               budgetUpdate = loan.amount + fine;

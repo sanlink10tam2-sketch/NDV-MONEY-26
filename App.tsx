@@ -962,9 +962,19 @@ const App: React.FC = () => {
     setIsGlobalProcessing(true);
     try {
       setRegisterError(null);
-      const existingUser = registeredUsers.find(u => u.phone === userData.phone);
+      const existingUser = registeredUsers.find(u => 
+        u.phone === userData.phone || 
+        (userData.refZalo && u.refZalo === userData.refZalo) ||
+        (userData.idNumber && u.idNumber === userData.idNumber)
+      );
       if (existingUser) {
-        setRegisterError("Số điện thoại này đã được đăng ký.");
+        if (existingUser.phone === userData.phone) {
+          setRegisterError("Số điện thoại này đã được đăng ký.");
+        } else if (userData.refZalo && existingUser.refZalo === userData.refZalo) {
+          setRegisterError("Số Zalo này đã được sử dụng bởi một tài khoản khác.");
+        } else {
+          setRegisterError("Số CCCD/CMND này đã được sử dụng bởi một tài khoản khác.");
+        }
         isProcessingRef.current = false;
         setIsGlobalProcessing(false);
         return;
@@ -1020,6 +1030,13 @@ const App: React.FC = () => {
           setToken(data.token);
           localStorage.setItem('vnv_token', data.token);
         }
+      } else {
+        const errorData = await response.json();
+        setRegisterError(errorData.error || "Đăng ký không thành công trên hệ thống.");
+        // Rollback optimistic UI
+        setRegisteredUsers(prev => prev.filter(u => u.id !== newUser.id));
+        setUser(null);
+        setCurrentView(AppView.LOGIN);
       }
       
       isProcessingRef.current = false;
@@ -1512,13 +1529,12 @@ const App: React.FC = () => {
         // 2. Create new loan for the next cycle with suffixed ID
         const nextCount = (loan.principalPaymentCount || 0) + 1;
         const nextExtensionCount = loan.settlementType === 'PRINCIPAL' ? (loan.extensionCount || 0) + 1 : (loan.extensionCount || 0);
+        const nextPartialCount = loan.settlementType === 'PARTIAL' ? (loan.partialPaymentCount || 0) + 1 : (loan.partialPaymentCount || 0);
         const suffix = loan.settlementType === 'PRINCIPAL' ? 'GH' : 'TTMP';
         
-        // Extract base ID (handle case where current ID might already have a suffix)
-        // Base ID format is [4 chars]-[4 numbers]
-        const idParts = loan.id.split('-');
-        const baseId = `${idParts[0]}-${idParts[1]}`;
-        const newId = `${baseId}-${suffix}-${nextCount}`;
+        // Remove hyphens from current ID and construct new ID
+        const cleanBaseId = loan.id.replace(/-/g, '').replace(/GH\d+|TTMP\d+$/g, '');
+        const newId = `${cleanBaseId}${suffix}${nextCount}`;
 
         nextLoan = {
           ...loan,
@@ -1528,10 +1544,15 @@ const App: React.FC = () => {
           amount: loan.settlementType === 'PARTIAL' ? (loan.amount - (loan.partialAmount || 0)) : loan.amount,
           principalPaymentCount: nextCount,
           extensionCount: nextExtensionCount,
+          partialPaymentCount: nextPartialCount,
           billImage: null,
           settlementType: null,
           partialAmount: null,
           fine: 0,
+          payosOrderCode: null,
+          payosCheckoutUrl: null,
+          payosAmount: null,
+          payosExpireAt: null,
           updatedAt: Date.now()
         };
 
@@ -1570,12 +1591,15 @@ const App: React.FC = () => {
       if (action === 'DISBURSE') {
         updateProfit(loan.amount * (Number(settings.PRE_DISBURSEMENT_FEE || 0) / 100)); // Recognize fee at disbursement
       } else if (action === 'SETTLE') {
+        const feePercent = Number(settings.PRE_DISBURSEMENT_FEE || 0) / 100;
         if (loan.settlementType === 'PRINCIPAL') {
           // Vay Gốc: Recognize fee for the next cycle + fines
-          updateProfit((loan.amount * (Number(settings.PRE_DISBURSEMENT_FEE || 0) / 100)) + (loan.fine || 0));
+          updateProfit((loan.amount * feePercent) + (loan.fine || 0));
         } else if (loan.settlementType === 'PARTIAL') {
-          // Tất toán 1 phần: Recognize fee on total loan amount + fines
-          updateProfit((loan.amount * (Number(settings.PRE_DISBURSEMENT_FEE || 0) / 100)) + (loan.fine || 0));
+          // Tất toán 1 phần: Recognize fee on remaining principal + fines
+          const pAmount = loan.partialAmount || 0;
+          const remainingPrincipal = loan.amount - pAmount;
+          updateProfit((remainingPrincipal * feePercent) + (loan.fine || 0));
         } else {
           // Tất Cả: Only recognize fines (fee was already recognized at disbursement)
           updateProfit(loan.fine || 0);
