@@ -1131,7 +1131,7 @@ const USER_WRITE_COLUMNS = [...USER_COLUMNS, 'password'];
 const USER_SUMMARY_COLUMNS = [
   'id', 'phone', 'fullName', 'idNumber', 'balance', 'totalLimit', 'rank', 
   'rankProgress', 'isLoggedIn', 'isAdmin', 'pendingUpgradeRank', 
-  'address', 'joinDate', 'refZalo', 'relationship', 'lastLoanSeq', 'bankName', 
+  'address', 'joinDate', 'idFront', 'idBack', 'refZalo', 'relationship', 'lastLoanSeq', 'bankName', 
   'bankAccountNumber', 'bankAccountHolder', 'hasJoinedZalo', 'updatedAt'
 ];
 
