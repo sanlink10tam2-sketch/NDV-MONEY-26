@@ -624,9 +624,8 @@ const App: React.FC = () => {
     socket.on('payment_success', (data: { message: string, type?: string }) => {
       console.log('[SOCKET] Payment success:', data);
       fetchData(true);
-      if (data.type === 'UPGRADE') {
-        setCurrentView(AppView.DASHBOARD);
-      }
+      // Luôn luôn chuyển về TRANG CHỦ khi thành công
+      setCurrentView(AppView.DASHBOARD);
     });
 
     socket.on('rank_upgrade_success', (data: { message: string }) => {
@@ -651,22 +650,20 @@ const App: React.FC = () => {
       const isUpgrade = type?.toUpperCase() === 'UPGRADE' || screen === AppView.RANK_LIMITS;
       
       if (payment === 'success') {
-        // If it's a successful upgrade or we are on the rank limits screen, always go to Dashboard
-        if (isUpgrade) {
-          console.log('[PAYOS] Upgrade success or from RankLimits, redirecting to Dashboard');
-          setCurrentView(AppView.DASHBOARD);
-        } else if (screen && Object.values(AppView).includes(screen as AppView)) {
-          setCurrentView(screen as AppView);
-        } else {
-          setCurrentView(AppView.DASHBOARD);
-        }
+        // Luôn luôn chuyển về TRANG CHỦ khi thành công
+        console.log('[PAYOS] Payment success, redirecting to Dashboard');
+        setCurrentView(AppView.DASHBOARD);
         
         // Trigger data refresh
         fetchData(true);
       } else if (payment === 'cancel') {
-        console.log('[PAYOS] Payment cancelled');
+        console.log('[PAYOS] Payment cancelled/failed');
+        // Chuyển về trang đang thao tác khi thất bại hoặc huỷ
         if (screen && Object.values(AppView).includes(screen as AppView)) {
           setCurrentView(screen as AppView);
+        } else {
+          // Fallback to Dashboard if screen is invalid
+          setCurrentView(AppView.DASHBOARD);
         }
         
         if (isUpgrade && token) {
