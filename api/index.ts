@@ -1435,7 +1435,8 @@ router.post("/payment/create-link", async (req, res) => {
         }
         
         finalDescription = template
-          .replace(/\{ID\}|\{Mã Hợp Đồng\}|\{LOAN_ID\}|\{MHD\}/gi, id.replace(/-/g, ''))
+          .replace(/\{ID\}|\{Mã Hợp Đồng\}|\{LOAN_ID\}|\{MHD\}/gi, id.replace(/-/g, '').replace(/\s/g, ''))
+          .replace(/\{USER\}|\{MÃ USER\}|\{NGƯỜI DÙNG\}/gi, (loanData?.userId || '').slice(-4).toUpperCase())
           .replace(/\{SỐ LẦN GIA HẠN\}|\{EXTENSION_COUNT\}|\{SLGH\}/gi, settleType === 'PRINCIPAL' ? (loanData?.extensionCount || 0) + 1 : '')
           .replace(/\{SỐ LẦN TTMP\}|\{PARTIAL_COUNT\}|\{SLTTMP\}/gi, settleType === 'PARTIAL' ? (loanData?.partialPaymentCount || 0) + 1 : '');
       }
