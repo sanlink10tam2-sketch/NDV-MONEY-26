@@ -98,6 +98,13 @@ const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, e
     }
   };
 
+  // Highlight fields based on server error
+  const serverFieldErrors = {
+    phone: error?.includes("Số điện thoại"),
+    zalo: error?.includes("Số Zalo"),
+    idNumber: error?.includes("Số CCCD")
+  };
+
   const handleConfirmRegister = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -201,7 +208,7 @@ const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, e
               type="tel"
               inputMode="numeric"
               placeholder="CCCD (12 SỐ)"
-              className={`w-full bg-[#16161a] border rounded-xl py-3.5 pl-9 pr-3.5 text-[11px] font-bold text-white placeholder-gray-600 focus:outline-none transition-all ${tooltips.idNumber ? 'border-red-500' : 'border-white/5 focus:border-orange-500/30'}`}
+              className={`w-full bg-[#16161a] border rounded-xl py-3.5 pl-9 pr-3.5 text-[11px] font-bold text-white placeholder-gray-600 focus:outline-none transition-all ${tooltips.idNumber || serverFieldErrors.idNumber ? 'border-red-500' : 'border-white/5 focus:border-orange-500/30'}`}
               value={formData.idNumber}
               onBlur={() => handleBlur('idNumber')}
               onChange={(e) => {
@@ -209,10 +216,10 @@ const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, e
                 if (error) onClearError?.();
               }}
             />
-            {tooltips.idNumber && (
+            {(tooltips.idNumber || serverFieldErrors.idNumber) && (
               <div className="absolute -top-7 left-0 right-0 z-20">
                 <div className="bg-red-500 text-white text-[7px] font-black py-0.5 px-2 rounded flex items-center gap-1 w-fit mx-auto relative shadow-lg">
-                  <AlertCircle size={8} /> CẦN ĐỦ 12 SỐ
+                  <AlertCircle size={8} /> {serverFieldErrors.idNumber ? 'ĐÃ TỒN TẠI' : 'CẦN ĐỦ 12 SỐ'}
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rotate-45"></div>
                 </div>
               </div>
@@ -226,7 +233,7 @@ const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, e
               type="tel"
               inputMode="numeric"
               placeholder="SỐ CÁ NHÂN"
-              className={`w-full bg-[#16161a] border rounded-xl py-3.5 pl-12 pr-3.5 text-[11px] font-bold text-white placeholder-gray-600 focus:outline-none transition-all ${tooltips.zaloPhone ? 'border-red-500' : 'border-white/5 focus:border-orange-500/30'}`}
+              className={`w-full bg-[#16161a] border rounded-xl py-3.5 pl-12 pr-3.5 text-[11px] font-bold text-white placeholder-gray-600 focus:outline-none transition-all ${tooltips.zaloPhone || serverFieldErrors.phone ? 'border-red-500' : 'border-white/5 focus:border-orange-500/30'}`}
               value={formData.zaloPhone}
               onBlur={() => handleBlur('zaloPhone')}
               onChange={(e) => {
@@ -234,10 +241,10 @@ const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, e
                 if (error) onClearError?.();
               }}
             />
-            {tooltips.zaloPhone && (
+            {(tooltips.zaloPhone || serverFieldErrors.phone) && (
               <div className="absolute -top-7 left-0 right-0 z-20">
                 <div className="bg-red-500 text-white text-[7px] font-black py-0.5 px-2 rounded flex items-center gap-1 w-fit mx-auto relative shadow-lg">
-                  <AlertCircle size={8} /> CẦN ĐỦ 10 SỐ
+                  <AlertCircle size={8} /> {serverFieldErrors.phone ? 'ĐÃ TỒN TẠI' : 'CẦN ĐỦ 10 SỐ'}
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rotate-45"></div>
                 </div>
               </div>
@@ -324,7 +331,7 @@ const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, e
               type="tel"
               inputMode="numeric"
               placeholder="ZALO THAM CHIẾU"
-              className={`w-full bg-[#16161a] border rounded-xl py-3.5 pl-14 pr-3.5 text-[11px] font-bold text-white placeholder-gray-600 focus:outline-none transition-all ${tooltips.refZalo ? 'border-red-500' : 'border-white/5 focus:border-orange-500/30'}`}
+              className={`w-full bg-[#16161a] border rounded-xl py-3.5 pl-14 pr-3.5 text-[11px] font-bold text-white placeholder-gray-600 focus:outline-none transition-all ${tooltips.refZalo || serverFieldErrors.zalo ? 'border-red-500' : 'border-white/5 focus:border-orange-500/30'}`}
               value={formData.refZalo}
               onBlur={() => handleBlur('refZalo')}
               onChange={(e) => {
@@ -332,10 +339,10 @@ const Register: React.FC<RegisterProps> = ({ onBack, onRegister, onClearError, e
                 if (error) onClearError?.();
               }}
             />
-            {tooltips.refZalo && (
+            {(tooltips.refZalo || serverFieldErrors.zalo) && (
               <div className="absolute -top-7 left-0 right-0 z-20">
                 <div className="bg-red-500 text-white text-[7px] font-black py-0.5 px-2 rounded flex items-center gap-1 w-fit mx-auto relative shadow-lg">
-                  <AlertCircle size={8} /> CẦN ĐỦ 10 SỐ
+                  <AlertCircle size={8} /> {serverFieldErrors.zalo ? 'ĐÃ TỒN TẠI' : 'CẦN ĐỦ 10 SỐ'}
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rotate-45"></div>
                 </div>
               </div>

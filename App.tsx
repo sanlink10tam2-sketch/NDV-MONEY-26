@@ -1009,14 +1009,6 @@ const App: React.FC = () => {
       
       const newUsers = [...registeredUsers, newUser];
       
-      // Optimistic UI
-      setRegisteredUsers(newUsers);
-      // Don't set user yet, wait for server response or just set it but without password
-      const { password: _, ...userForState } = newUser;
-      setUser(userForState as User);
-      setCurrentView(AppView.DASHBOARD);
-      setShowBankWarning(true);
-
       // Background Sync - Only send the NEW user, not the whole array
       const response = await fetch('/api/register', {
         method: 'POST',
@@ -1029,14 +1021,20 @@ const App: React.FC = () => {
         if (data.success) {
           setToken(data.token);
           localStorage.setItem('vnv_token', data.token);
+          
+          // Update local state ONLY after successful server registration
+          setRegisteredUsers(newUsers);
+          const { password: _, ...userForState } = newUser;
+          setUser(userForState as User);
+          setCurrentView(AppView.DASHBOARD);
+          setShowBankWarning(true);
         }
       } else {
         const errorData = await response.json();
         setRegisterError(errorData.error || "Đăng ký không thành công trên hệ thống.");
-        // Rollback optimistic UI
-        setRegisteredUsers(prev => prev.filter(u => u.id !== newUser.id));
-        setUser(null);
-        setCurrentView(AppView.LOGIN);
+        // Stay on REGISTER view, don't clear user state if we want them to edit, 
+        // but since Register.tsx has its own state, we just need to stay on the view.
+        setCurrentView(AppView.REGISTER);
       }
       
       isProcessingRef.current = false;
