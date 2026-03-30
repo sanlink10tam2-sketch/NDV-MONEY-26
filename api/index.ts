@@ -1650,9 +1650,9 @@ router.post("/payment/webhook", async (req, res) => {
             const nextPartialCount = settleType === 'PARTIAL' ? (loan.partialPaymentCount || 0) + 1 : (loan.partialPaymentCount || 0);
             const suffix = settleType === 'PRINCIPAL' ? 'GH' : 'TTMP';
             
-            const idParts = loan.id.split('-');
-            const baseId = `${idParts[0]}-${idParts[1]}`;
-            const newId = `${baseId}-${suffix}-${nextCount}`;
+            // Remove hyphens from base ID and construct new ID without hyphens
+            const cleanBaseId = loan.id.replace(/-/g, '');
+            const newId = `${cleanBaseId}${suffix}${nextCount}`;
             
             // Calculate new due date (1st of next month)
             const [d, m, y] = loan.date.split('/').map(Number);

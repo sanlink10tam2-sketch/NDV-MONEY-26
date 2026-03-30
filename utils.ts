@@ -54,9 +54,9 @@ export const calculateFine = (amount: number, dueDateStr: string, fineRate = 0.0
 
 /**
  * Sinh mã hợp đồng duy nhất dựa trên định dạng cấu hình
- * Mặc định: HD-{RANDOM}
+ * Mặc định: HD{RANDOM}
  */
-export const generateContractId = (userId: string, format = 'HD-{RANDOM}'): string => {
+export const generateContractId = (userId: string, format = 'HD{RANDOM}'): string => {
   const now = new Date();
   const randomPart = Math.floor(1000 + Math.random() * 9000).toString();
   const userPart = userId.slice(-4).toUpperCase();
@@ -67,7 +67,7 @@ export const generateContractId = (userId: string, format = 'HD-{RANDOM}'): stri
   const dateStr = `${day}${month}${year.slice(-2)}`;
 
   // Ensure format is a string and not empty
-  const safeFormat = (typeof format === 'string' && format.trim() !== '') ? format : 'HD-{RANDOM}';
+  const safeFormat = (typeof format === 'string' && format.trim() !== '') ? format : 'HD{RANDOM}';
 
   return safeFormat
     .replace(/\{RANDOM\}|\{RANDOM 4 SỐ\}|\{MÃ NGẪU NHIÊN\}|\{Mã Hợp Đồng\}|\{MHD\}/gi, randomPart)
