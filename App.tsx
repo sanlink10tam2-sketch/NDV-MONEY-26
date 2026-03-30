@@ -120,7 +120,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = (reason?: string) => {
     setUser(null);
     setToken(null);
     // Clear all possible session storages
@@ -129,22 +129,23 @@ const App: React.FC = () => {
     sessionStorage.removeItem('vnv_user');
     sessionStorage.removeItem('vnv_token');
     setCurrentView(AppView.LOGIN);
+    if (reason) {
+      setLoginError(reason);
+    }
   };
 
-  // 3. Inactivity Timeout - Logout after 30 minutes of no interaction
+  // 3. Inactivity Timeout - Logout after 5 minutes of no interaction
   useEffect(() => {
     if (!user || !token) return;
 
-    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+    const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
     let timeoutId: any;
 
     const resetTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         console.log("[AUTH] Logging out due to inactivity");
-        handleLogout();
-        // Use a non-blocking way to inform if possible, but for security alert is fine
-        // Note: iframe restrictions might block alert, but it's a safe fallback
+        handleLogout("Phiên làm việc đã hết hạn do không hoạt động trong 5 phút. Vui lòng đăng nhập lại.");
       }, INACTIVITY_TIMEOUT);
     };
 
