@@ -982,7 +982,7 @@ END $$;`;
                           onChange={(e) => setLocalSettings({...localSettings, PAYMENT_CONTENT_PARTIAL_SETTLEMENT: e.target.value})}
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-bold text-white focus:border-[#ff8c00] outline-none transition-all"
                         />
-                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{ID}'}, {'{MHD}'} hoặc {'{USER}'} để tạo nội dung.</p>
+                        <p className="text-[7px] text-gray-500 italic">Sử dụng {'{ID}'}, {'{MHD}'}, {'{SLTTMP}'} hoặc {'{USER}'} để tạo nội dung.</p>
                       </div>
                       <div className="space-y-2">
                         <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Gia hạn</label>

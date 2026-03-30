@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS loans (
   "rejectionReason" TEXT,
   "principalPaymentCount" INTEGER DEFAULT 0,
   "extensionCount" INTEGER DEFAULT 0,
+  "partialPaymentCount" INTEGER DEFAULT 0,
   "updatedAt" BIGINT
 );
 

@@ -1421,14 +1421,14 @@ router.post("/payment/create-link", async (req, res) => {
         let loanData: any = null;
         
         if (settleType === 'PARTIAL' || settleType === 'PRINCIPAL') {
-          // Fetch loan to get extension count for both Partial and Principal (Extension)
-          const { data } = await client.from('loans').select('extensionCount').eq('id', id).single();
+          // Fetch loan to get counts for both Partial and Principal (Extension)
+          const { data } = await client.from('loans').select('extensionCount, partialPaymentCount').eq('id', id).single();
           loanData = data;
           
           if (settleType === 'PARTIAL') {
-            template = settings.PAYMENT_CONTENT_PARTIAL_SETTLEMENT || "TTMP {ID}";
+            template = settings.PAYMENT_CONTENT_PARTIAL_SETTLEMENT || "TTMP {ID} LAN {SLTTMP}";
           } else {
-            template = settings.PAYMENT_CONTENT_EXTENSION || "GIA HAN {ID}";
+            template = settings.PAYMENT_CONTENT_EXTENSION || "GIA HAN {ID} LAN {SLGH}";
           }
         } else {
           template = settings.PAYMENT_CONTENT_FULL_SETTLEMENT || "TAT TOAN {ID}";
@@ -1436,7 +1436,8 @@ router.post("/payment/create-link", async (req, res) => {
         
         finalDescription = template
           .replace(/\{ID\}|\{Mã Hợp Đồng\}|\{LOAN_ID\}|\{MHD\}/gi, id.replace(/-/g, ''))
-          .replace(/\{SỐ LẦN GIA HẠN\}|\{EXTENSION_COUNT\}|\{SLGH\}/gi, (loanData?.extensionCount || 0) + 1);
+          .replace(/\{SỐ LẦN GIA HẠN\}|\{EXTENSION_COUNT\}|\{SLGH\}/gi, settleType === 'PRINCIPAL' ? (loanData?.extensionCount || 0) + 1 : '')
+          .replace(/\{SỐ LẦN TTMP\}|\{PARTIAL_COUNT\}|\{SLTTMP\}/gi, settleType === 'PARTIAL' ? (loanData?.partialPaymentCount || 0) + 1 : '');
       }
     }
 
@@ -1643,42 +1644,44 @@ router.post("/payment/webhook", async (req, res) => {
                 .update({ balance: newBalance, rankProgress: newRankProgress, updatedAt: Date.now() })
                 .eq('id', loan.userId);
             } else {
-              // PRINCIPAL (Gia hạn) or PARTIAL (TTMP): Create next cycle loan
-              const nextCount = (loan.principalPaymentCount || 0) + 1;
-              const nextExtensionCount = settleType === 'PRINCIPAL' ? (loan.extensionCount || 0) + 1 : (loan.extensionCount || 0);
-              const suffix = settleType === 'PRINCIPAL' ? 'GH' : 'TTMP';
-              
-              const idParts = loan.id.split('-');
-              const baseId = `${idParts[0]}-${idParts[1]}`;
-              const newId = `${baseId}-${suffix}-${nextCount}`;
-              
-              // Calculate new due date (1st of next month)
-              const [d, m, y] = loan.date.split('/').map(Number);
-              const currentDueDate = new Date(y, m - 1, d);
-              const nextCycleDate = new Date(currentDueDate.getFullYear(), currentDueDate.getMonth() + 1, 1);
-              const dayStr = nextCycleDate.getDate().toString().padStart(2, '0');
-              const monthStr = (nextCycleDate.getMonth() + 1).toString().padStart(2, '0');
-              const newDueDate = `${dayStr}/${monthStr}/${nextCycleDate.getFullYear()}`;
-              
-              const nextLoanAmount = settleType === 'PARTIAL' ? (loan.amount - (loan.partialAmount || 0)) : loan.amount;
-              
-              const nextLoan = {
-                ...loan,
-                id: newId,
-                status: 'ĐANG NỢ',
-                date: newDueDate,
-                amount: nextLoanAmount,
-                principalPaymentCount: nextCount,
-                extensionCount: nextExtensionCount,
-                billImage: null,
-                settlementType: null,
-                partialAmount: null,
-                fine: 0,
-                payosOrderCode: null,
-                payosCheckoutUrl: null,
-                payosExpireAt: null,
-                updatedAt: Date.now()
-              };
+            // PRINCIPAL (Gia hạn) or PARTIAL (TTMP): Create next cycle loan
+            const nextCount = (loan.principalPaymentCount || 0) + 1;
+            const nextExtensionCount = settleType === 'PRINCIPAL' ? (loan.extensionCount || 0) + 1 : (loan.extensionCount || 0);
+            const nextPartialCount = settleType === 'PARTIAL' ? (loan.partialPaymentCount || 0) + 1 : (loan.partialPaymentCount || 0);
+            const suffix = settleType === 'PRINCIPAL' ? 'GH' : 'TTMP';
+            
+            const idParts = loan.id.split('-');
+            const baseId = `${idParts[0]}-${idParts[1]}`;
+            const newId = `${baseId}-${suffix}-${nextCount}`;
+            
+            // Calculate new due date (1st of next month)
+            const [d, m, y] = loan.date.split('/').map(Number);
+            const currentDueDate = new Date(y, m - 1, d);
+            const nextCycleDate = new Date(currentDueDate.getFullYear(), currentDueDate.getMonth() + 1, 1);
+            const dayStr = nextCycleDate.getDate().toString().padStart(2, '0');
+            const monthStr = (nextCycleDate.getMonth() + 1).toString().padStart(2, '0');
+            const newDueDate = `${dayStr}/${monthStr}/${nextCycleDate.getFullYear()}`;
+            
+            const nextLoanAmount = settleType === 'PARTIAL' ? (loan.amount - (loan.partialAmount || 0)) : loan.amount;
+            
+            const nextLoan = {
+              ...loan,
+              id: newId,
+              status: 'ĐANG NỢ',
+              date: newDueDate,
+              amount: nextLoanAmount,
+              principalPaymentCount: nextCount,
+              extensionCount: nextExtensionCount,
+              partialPaymentCount: nextPartialCount,
+              billImage: null,
+              settlementType: null,
+              partialAmount: null,
+              fine: 0,
+              payosOrderCode: null,
+              payosCheckoutUrl: null,
+              payosExpireAt: null,
+              updatedAt: Date.now()
+            };
               
               await client.from('loans').insert([nextLoan]);
               
