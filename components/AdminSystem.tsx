@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   phone TEXT UNIQUE NOT NULL,
   "fullName" TEXT,
-  "idNumber" TEXT,
+  "idNumber" TEXT UNIQUE,
   balance NUMERIC DEFAULT 0,
   "totalLimit" NUMERIC DEFAULT 0,
   rank TEXT DEFAULT 'standard',
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS users (
   "joinDate" TEXT,
   "idFront" TEXT,
   "idBack" TEXT,
-  "refZalo" TEXT,
+  "refZalo" TEXT UNIQUE,
   relationship TEXT,
   password TEXT,
   "lastLoanSeq" INTEGER DEFAULT 0,
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS users (
   "bankAccountNumber" TEXT,
   "bankAccountHolder" TEXT,
   "hasJoinedZalo" BOOLEAN DEFAULT false,
-  "payosOrderCode" TEXT,
+  "payosOrderCode" BIGINT,
   "payosCheckoutUrl" TEXT,
   "payosAmount" NUMERIC,
   "payosExpireAt" BIGINT,
@@ -134,7 +134,8 @@ CREATE TABLE IF NOT EXISTS loans (
   "rejectionReason" TEXT,
   "principalPaymentCount" INTEGER DEFAULT 0,
   "extensionCount" INTEGER DEFAULT 0,
-  "payosOrderCode" TEXT,
+  "partialPaymentCount" INTEGER DEFAULT 0,
+  "payosOrderCode" BIGINT,
   "payosCheckoutUrl" TEXT,
   "payosAmount" NUMERIC,
   "payosExpireAt" BIGINT,
@@ -160,10 +161,10 @@ CREATE TABLE IF NOT EXISTS config (
 
 -- Insert default config values
 INSERT INTO config (key, value) VALUES 
-('budget', '30000000'),
-('rankProfit', '0'),
-('loanProfit', '0'),
-('monthlyStats', '[]')
+('SYSTEM_BUDGET', '30000000'),
+('TOTAL_RANK_PROFIT', '0'),
+('TOTAL_LOAN_PROFIT', '0'),
+('MONTHLY_STATS', '[]')
 ON CONFLICT (key) DO NOTHING;
 
 -- Add missing columns to existing tables (if they don't exist)
@@ -171,7 +172,7 @@ DO $$
 BEGIN 
     -- Users table columns
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='payosOrderCode') THEN
-        ALTER TABLE users ADD COLUMN "payosOrderCode" TEXT;
+        ALTER TABLE users ADD COLUMN "payosOrderCode" BIGINT;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='payosCheckoutUrl') THEN
         ALTER TABLE users ADD COLUMN "payosCheckoutUrl" TEXT;
@@ -182,10 +183,16 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='payosExpireAt') THEN
         ALTER TABLE users ADD COLUMN "payosExpireAt" BIGINT;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='idNumber') THEN
+        ALTER TABLE users ADD COLUMN "idNumber" TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='refZalo') THEN
+        ALTER TABLE users ADD COLUMN "refZalo" TEXT;
+    END IF;
 
     -- Loans table columns
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='payosOrderCode') THEN
-        ALTER TABLE loans ADD COLUMN "payosOrderCode" TEXT;
+        ALTER TABLE loans ADD COLUMN "payosOrderCode" BIGINT;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='payosCheckoutUrl') THEN
         ALTER TABLE loans ADD COLUMN "payosCheckoutUrl" TEXT;
@@ -199,6 +206,28 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='partialAmount') THEN
         ALTER TABLE loans ADD COLUMN "partialAmount" NUMERIC DEFAULT 0;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='principalPaymentCount') THEN
+        ALTER TABLE loans ADD COLUMN "principalPaymentCount" INTEGER DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='extensionCount') THEN
+        ALTER TABLE loans ADD COLUMN "extensionCount" INTEGER DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='partialPaymentCount') THEN
+        ALTER TABLE loans ADD COLUMN "partialPaymentCount" INTEGER DEFAULT 0;
+    END IF;
+
+    -- Constraints (Safe addition)
+    BEGIN
+        ALTER TABLE users ADD CONSTRAINT users_idNumber_unique UNIQUE ("idNumber");
+    EXCEPTION WHEN duplicate_table THEN
+        -- Do nothing if constraint already exists
+    END;
+    
+    BEGIN
+        ALTER TABLE users ADD CONSTRAINT users_refZalo_unique UNIQUE ("refZalo");
+    EXCEPTION WHEN duplicate_table THEN
+        -- Do nothing if constraint already exists
+    END;
 END $$;`;
   
   const formatNumberWithDots = (val: string | number) => {

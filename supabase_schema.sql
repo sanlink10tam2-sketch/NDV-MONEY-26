@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS loans (
   "billImage" TEXT,
   "bankTransactionId" TEXT,
   "settlementType" TEXT,
-  "partialAmount" NUMERIC,
+  "partialAmount" NUMERIC DEFAULT 0,
   "payosCheckoutUrl" TEXT,
   "payosOrderCode" BIGINT,
   "payosAmount" NUMERIC,
@@ -94,3 +94,66 @@ INSERT INTO config (key, value) VALUES
 ('MAX_SINGLE_LOAN_AMOUNT', '10000000'),
 ('USER_ID_FORMAT', '"{RANDOM 4 SỐ}"')
 ON CONFLICT (key) DO NOTHING;
+
+-- Safe Migration Script (Run this if you are updating an existing database)
+DO $$ 
+BEGIN 
+    -- Users table columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='payosOrderCode') THEN
+        ALTER TABLE users ADD COLUMN "payosOrderCode" BIGINT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='payosCheckoutUrl') THEN
+        ALTER TABLE users ADD COLUMN "payosCheckoutUrl" TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='payosAmount') THEN
+        ALTER TABLE users ADD COLUMN "payosAmount" NUMERIC;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='payosExpireAt') THEN
+        ALTER TABLE users ADD COLUMN "payosExpireAt" BIGINT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='idNumber') THEN
+        ALTER TABLE users ADD COLUMN "idNumber" TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='refZalo') THEN
+        ALTER TABLE users ADD COLUMN "refZalo" TEXT;
+    END IF;
+
+    -- Loans table columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='payosOrderCode') THEN
+        ALTER TABLE loans ADD COLUMN "payosOrderCode" BIGINT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='payosCheckoutUrl') THEN
+        ALTER TABLE loans ADD COLUMN "payosCheckoutUrl" TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='payosAmount') THEN
+        ALTER TABLE loans ADD COLUMN "payosAmount" NUMERIC;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='payosExpireAt') THEN
+        ALTER TABLE loans ADD COLUMN "payosExpireAt" BIGINT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='partialAmount') THEN
+        ALTER TABLE loans ADD COLUMN "partialAmount" NUMERIC DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='principalPaymentCount') THEN
+        ALTER TABLE loans ADD COLUMN "principalPaymentCount" INTEGER DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='extensionCount') THEN
+        ALTER TABLE loans ADD COLUMN "extensionCount" INTEGER DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='loans' AND column_name='partialPaymentCount') THEN
+        ALTER TABLE loans ADD COLUMN "partialPaymentCount" INTEGER DEFAULT 0;
+    END IF;
+
+    -- Constraints (Safe addition)
+    BEGIN
+        ALTER TABLE users ADD CONSTRAINT users_idNumber_unique UNIQUE ("idNumber");
+    EXCEPTION WHEN duplicate_object THEN
+        -- Do nothing if constraint already exists
+    END;
+    
+    BEGIN
+        ALTER TABLE users ADD CONSTRAINT users_refZalo_unique UNIQUE ("refZalo");
+    EXCEPTION WHEN duplicate_object THEN
+        -- Do nothing if constraint already exists
+    END;
+END $$;

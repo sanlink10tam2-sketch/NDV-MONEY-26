@@ -63,7 +63,11 @@ const App: React.FC = () => {
   const [settleLoanFromDash, setSettleLoanFromDash] = useState<LoanRecord | null>(null);
   const [viewLoanFromDash, setViewLoanFromDash] = useState<LoanRecord | null>(null);
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('vnv_user');
+    // Check both localStorage (Stay Logged In) and sessionStorage (Session only)
+    const savedLocal = localStorage.getItem('vnv_user');
+    const savedSession = sessionStorage.getItem('vnv_user');
+    const saved = savedLocal || savedSession;
+    
     if (saved && saved !== 'null' && saved !== '') {
       try {
         return JSON.parse(saved);
@@ -74,7 +78,7 @@ const App: React.FC = () => {
     return null;
   });
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('vnv_token');
+    return localStorage.getItem('vnv_token') || sessionStorage.getItem('vnv_token');
   });
 
   const handlePayOSPayment = async (type: 'SETTLE' | 'UPGRADE', id: string, amount: number, targetRank?: string, settleType?: string, partialAmount?: number) => {
@@ -119,10 +123,41 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setUser(null);
     setToken(null);
+    // Clear all possible session storages
     localStorage.removeItem('vnv_user');
     localStorage.removeItem('vnv_token');
+    sessionStorage.removeItem('vnv_user');
+    sessionStorage.removeItem('vnv_token');
     setCurrentView(AppView.LOGIN);
   };
+
+  // 3. Inactivity Timeout - Logout after 30 minutes of no interaction
+  useEffect(() => {
+    if (!user || !token) return;
+
+    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+    let timeoutId: any;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        console.log("[AUTH] Logging out due to inactivity");
+        handleLogout();
+        // Use a non-blocking way to inform if possible, but for security alert is fine
+        // Note: iframe restrictions might block alert, but it's a safe fallback
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => document.addEventListener(event, resetTimer));
+
+    resetTimer();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => document.removeEventListener(event, resetTimer));
+    };
+  }, [user?.id, token]);
 
   const authenticatedFetch = useCallback(async (url: string, options: RequestInit = {}, retries = 2) => {
     if (!token && !url.includes('/api/login') && !url.includes('/api/register')) {
@@ -456,7 +491,6 @@ const App: React.FC = () => {
         const freshUser = data.users.find((u: User) => u.id === user.id);
         if (freshUser) {
           setUser(freshUser);
-          localStorage.setItem('vnv_user', JSON.stringify(freshUser));
         }
       }
     } catch (e: any) {
@@ -502,7 +536,6 @@ const App: React.FC = () => {
       });
       if (user && user.id === updatedUser.id) {
         setUser(updatedUser);
-        localStorage.setItem('vnv_user', JSON.stringify(updatedUser));
       }
     });
 
@@ -523,7 +556,6 @@ const App: React.FC = () => {
         const me = updatedUsers.find(u => u.id === user.id);
         if (me) {
           setUser(me);
-          localStorage.setItem('vnv_user', JSON.stringify(me));
         }
       }
     });
@@ -910,15 +942,32 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('vnv_remember', rememberMe.toString());
     
-    if (!isInitialized) return; // Don't touch localStorage during initial load
+    if (!isInitialized) return; // Don't touch storage during initial load
 
-    if (rememberMe && user) {
-      localStorage.setItem('vnv_user', JSON.stringify(user));
+    if (user && token) {
+      if (rememberMe) {
+        // Persist to localStorage (Stay Logged In)
+        localStorage.setItem('vnv_user', JSON.stringify(user));
+        localStorage.setItem('vnv_token', token);
+        // Clear sessionStorage to avoid duplicates
+        sessionStorage.removeItem('vnv_user');
+        sessionStorage.removeItem('vnv_token');
+      } else {
+        // Persist to sessionStorage (Session Only)
+        sessionStorage.setItem('vnv_user', JSON.stringify(user));
+        sessionStorage.setItem('vnv_token', token);
+        // Clear localStorage to ensure it doesn't persist across restarts
+        localStorage.removeItem('vnv_user');
+        localStorage.removeItem('vnv_token');
+      }
     } else if (!user) {
       // Only remove if user is explicitly null (logged out)
       localStorage.removeItem('vnv_user');
+      localStorage.removeItem('vnv_token');
+      sessionStorage.removeItem('vnv_user');
+      sessionStorage.removeItem('vnv_token');
     }
-  }, [user, rememberMe, isInitialized]);
+  }, [user, token, rememberMe, isInitialized]);
 
   const handleLogin = async (phone: string, password?: string) => {
     setLoginError(null);
@@ -936,7 +985,17 @@ const App: React.FC = () => {
           const loggedInUser = { ...data.user, isLoggedIn: true };
           setUser(loggedInUser);
           setToken(data.token);
-          localStorage.setItem('vnv_token', data.token);
+          
+          // Determine storage based on rememberMe
+          const storage = rememberMe ? localStorage : sessionStorage;
+          storage.setItem('vnv_user', JSON.stringify(loggedInUser));
+          storage.setItem('vnv_token', data.token);
+          
+          // Clear the other storage to prevent conflicts
+          const otherStorage = rememberMe ? sessionStorage : localStorage;
+          otherStorage.removeItem('vnv_user');
+          otherStorage.removeItem('vnv_token');
+
           setCurrentView(loggedInUser.isAdmin ? AppView.ADMIN_DASHBOARD : AppView.DASHBOARD);
           if (!loggedInUser.isAdmin && !hasBankInfo(loggedInUser)) {
             setShowBankWarning(true);
@@ -1020,12 +1079,25 @@ const App: React.FC = () => {
         const data = await response.json();
         if (data.success) {
           setToken(data.token);
-          localStorage.setItem('vnv_token', data.token);
+          
+          // Determine storage based on rememberMe
+          const storage = rememberMe ? localStorage : sessionStorage;
+          storage.setItem('vnv_token', data.token);
+          
+          // Clear the other storage to prevent conflicts
+          const otherStorage = rememberMe ? sessionStorage : localStorage;
+          otherStorage.removeItem('vnv_token');
           
           // Update local state ONLY after successful server registration
           setRegisteredUsers(newUsers);
           const { password: _, ...userForState } = newUser;
-          setUser(userForState as User);
+          const loggedInUser = { ...userForState, isLoggedIn: true } as User;
+          setUser(loggedInUser);
+          
+          // Also save user to storage
+          storage.setItem('vnv_user', JSON.stringify(loggedInUser));
+          otherStorage.removeItem('vnv_user');
+
           setCurrentView(AppView.DASHBOARD);
           setShowBankWarning(true);
         }
@@ -1161,7 +1233,6 @@ const App: React.FC = () => {
           const me = data.users.find((u: any) => u.id === user.id);
           if (me) {
             setUser(me);
-            localStorage.setItem('vnv_user', JSON.stringify(me));
           }
         }
       }

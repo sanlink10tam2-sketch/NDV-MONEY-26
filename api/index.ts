@@ -1034,7 +1034,7 @@ router.post("/budget", async (req, res) => {
     const client = initSupabase();
     if (!client) return res.status(503).json({ error: "Supabase not configured" });
     const { budget } = req.body;
-    const { error } = await client.from('config').upsert({ key: 'budget', value: budget }, { onConflict: 'key' });
+    const { error } = await client.from('config').upsert({ key: 'SYSTEM_BUDGET', value: budget }, { onConflict: 'key' });
     if (error) throw error;
     sendSafeJson(res, { success: true });
   } catch (e: any) {
@@ -1048,7 +1048,7 @@ router.post("/rankProfit", async (req, res) => {
     const client = initSupabase();
     if (!client) return res.status(503).json({ error: "Supabase not configured" });
     const { rankProfit } = req.body;
-    const { error } = await client.from('config').upsert({ key: 'rankProfit', value: rankProfit }, { onConflict: 'key' });
+    const { error } = await client.from('config').upsert({ key: 'TOTAL_RANK_PROFIT', value: rankProfit }, { onConflict: 'key' });
     if (error) throw error;
     sendSafeJson(res, { success: true });
   } catch (e: any) {
@@ -1062,7 +1062,7 @@ router.post("/loanProfit", async (req, res) => {
     const client = initSupabase();
     if (!client) return res.status(503).json({ error: "Supabase not configured" });
     const { loanProfit } = req.body;
-    const { error } = await client.from('config').upsert({ key: 'loanProfit', value: loanProfit }, { onConflict: 'key' });
+    const { error } = await client.from('config').upsert({ key: 'TOTAL_LOAN_PROFIT', value: loanProfit }, { onConflict: 'key' });
     if (error) throw error;
     sendSafeJson(res, { success: true });
   } catch (e: any) {
@@ -1076,7 +1076,7 @@ router.post("/monthlyStats", async (req, res) => {
     const client = initSupabase();
     if (!client) return res.status(503).json({ error: "Supabase not configured" });
     const { monthlyStats } = req.body;
-    const { error } = await client.from('config').upsert({ key: 'monthlyStats', value: monthlyStats }, { onConflict: 'key' });
+    const { error } = await client.from('config').upsert({ key: 'MONTHLY_STATS', value: monthlyStats }, { onConflict: 'key' });
     if (error) throw error;
     sendSafeJson(res, { success: true });
   } catch (e: any) {
@@ -1090,11 +1090,12 @@ router.delete("/users/:id", async (req, res) => {
     const client = initSupabase();
     if (!client) return res.status(503).json({ error: "Supabase not configured" });
     const userId = req.params.id;
-    await Promise.all([
-      client.from('users').delete().eq('id', userId),
-      client.from('loans').delete().eq('userId', userId),
-      client.from('notifications').delete().eq('userId', userId)
-    ]);
+    
+    // Delete children first due to foreign key constraints
+    await client.from('loans').delete().eq('userId', userId);
+    await client.from('notifications').delete().eq('userId', userId);
+    await client.from('users').delete().eq('id', userId);
+    
     sendSafeJson(res, { success: true });
   } catch (e: any) {
     console.error("Lỗi trong DELETE /api/users/:id:", e);
@@ -1260,14 +1261,17 @@ router.post("/reset", async (req, res) => {
     if (!client) return res.status(503).json({ error: "Supabase not configured" });
     
     // Delete all data except admin
+    // Must delete children first due to foreign key constraints
+    await client.from('loans').delete().neq('id', 'KEEP_NONE');
+    await client.from('notifications').delete().neq('id', 'KEEP_NONE');
+    await client.from('users').delete().eq('isAdmin', false);
+    
+    // Reset config values
     await Promise.all([
-      client.from('users').delete().neq('id', 'AD01'),
-      client.from('loans').delete().neq('id', 'KEEP_NONE'),
-      client.from('notifications').delete().neq('id', 'KEEP_NONE'),
-      client.from('config').upsert({ key: 'budget', value: 30000000 }, { onConflict: 'key' }),
-      client.from('config').upsert({ key: 'rankProfit', value: 0 }, { onConflict: 'key' }),
-      client.from('config').upsert({ key: 'loanProfit', value: 0 }, { onConflict: 'key' }),
-      client.from('config').upsert({ key: 'monthlyStats', value: [] }, { onConflict: 'key' })
+      client.from('config').upsert({ key: 'SYSTEM_BUDGET', value: 30000000 }, { onConflict: 'key' }),
+      client.from('config').upsert({ key: 'TOTAL_RANK_PROFIT', value: 0 }, { onConflict: 'key' }),
+      client.from('config').upsert({ key: 'TOTAL_LOAN_PROFIT', value: 0 }, { onConflict: 'key' }),
+      client.from('config').upsert({ key: 'MONTHLY_STATS', value: [] }, { onConflict: 'key' })
     ]);
     
     sendSafeJson(res, { success: true });
@@ -1344,19 +1348,19 @@ router.post("/import", async (req, res) => {
     }
     
     if (budget !== undefined) {
-      tasks.push(client.from('config').upsert({ key: 'budget', value: budget }, { onConflict: 'key' }));
+      tasks.push(client.from('config').upsert({ key: 'SYSTEM_BUDGET', value: budget }, { onConflict: 'key' }));
     }
     
     if (rankProfit !== undefined) {
-      tasks.push(client.from('config').upsert({ key: 'rankProfit', value: rankProfit }, { onConflict: 'key' }));
+      tasks.push(client.from('config').upsert({ key: 'TOTAL_RANK_PROFIT', value: rankProfit }, { onConflict: 'key' }));
     }
  
     if (loanProfit !== undefined) {
-      tasks.push(client.from('config').upsert({ key: 'loanProfit', value: loanProfit }, { onConflict: 'key' }));
+      tasks.push(client.from('config').upsert({ key: 'TOTAL_LOAN_PROFIT', value: loanProfit }, { onConflict: 'key' }));
     }
  
     if (monthlyStats !== undefined) {
-      tasks.push(client.from('config').upsert({ key: 'monthlyStats', value: monthlyStats }, { onConflict: 'key' }));
+      tasks.push(client.from('config').upsert({ key: 'MONTHLY_STATS', value: monthlyStats }, { onConflict: 'key' }));
     }
     
     if (tasks.length > 0) {
